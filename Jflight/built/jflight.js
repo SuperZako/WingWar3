@@ -759,6 +759,7 @@ var Plane = (function (_super) {
     // �R���X�g���N�^
     function Plane(scene) {
         var _this = _super.call(this) || this;
+        // ���[���h���W���@�̍��W�ւ̕ϊ��s��
         _this.matrix = new THREE.Matrix4();
         _this.invMatrix = new THREE.Matrix4();
         _this.wings = []; // �e��(0,1-�嗃,2-��������,3-��������,4,5-�G���W��)
@@ -921,25 +922,19 @@ var Plane = (function (_super) {
         var a = new THREE.Euler(x, -y, z, "YXZ");
         this.matrix.makeRotationFromEuler(a);
         // �t�s���ݒ�
-        this.invMatrix.copy(this.matrix);
         // ���s�s��Ȃ̂ŁA�]�u�s�񂪋t�s��ɂȂ�
+        this.invMatrix.copy(this.matrix);
         this.invMatrix.transpose();
     };
     // ���[���h���W��@�̍��W�֕ϊ�����i�P���ϊ��̂݁j
     Plane.prototype.worldToLocal = function (worldVector, localVector) {
         localVector.copy(worldVector);
         localVector.applyMatrix4(this.matrix);
-        //pl.x = pw.x * this.matrix.elements[0] + pw.y * this.matrix.elements[4] + pw.z * this.matrix.elements[8];
-        //pl.y = pw.x * this.matrix.elements[1] + pw.y * this.matrix.elements[5] + pw.z * this.matrix.elements[9];
-        //pl.z = pw.x * this.matrix.elements[2] + pw.y * this.matrix.elements[6] + pw.z * this.matrix.elements[10];
     };
     // �@�̍��W����[���h���W�֕ϊ�����i�P���ϊ��̂݁j
     Plane.prototype.localToWorld = function (localVector, worldVector) {
         worldVector.copy(localVector);
         worldVector.applyMatrix4(this.invMatrix);
-        // pw.x = pl.x * this.matrix.elements[0] + pl.y * this.matrix.elements[1] + pl.z * this.matrix.elements[2];
-        // pw.y = pl.x * this.matrix.elements[4] + pl.y * this.matrix.elements[5] + pl.z * this.matrix.elements[6];
-        // pw.z = pl.x * this.matrix.elements[8] + pl.y * this.matrix.elements[9] + pl.z * this.matrix.elements[10];
     };
     // �@�e��~�T�C���̃��b�N����
     Plane.prototype.lockCheck = function (world) {
@@ -1130,6 +1125,7 @@ var Plane = (function (_super) {
             wing.calc(this, ve, i, this.boost);
             ++i;
             // ��
+            // af += wing.fVel * this.matrix
             // af.x += (wing.fVel.x * this.matrix.elements[0] + wing.fVel.y * this.matrix.elements[1] + wing.fVel.z * this.matrix.elements[2]);
             // af.y += (wing.fVel.x * this.matrix.elements[4] + wing.fVel.y * this.matrix.elements[5] + wing.fVel.z * this.matrix.elements[6]);
             // af.z += (wing.fVel.x * this.matrix.elements[8] + wing.fVel.y * this.matrix.elements[9] + wing.fVel.z * this.matrix.elements[10]) + wing.mass * Jflight.G;
@@ -1881,38 +1877,39 @@ var HUD = (function () {
         }
     }
     HUD.prototype.drawLine = function (strokeStyle, x1, y1, x2, y2) {
-        var context = this.context;
-        context.save();
+        var ctx = this.context;
+        ctx.save();
         {
-            context.strokeStyle = strokeStyle;
+            ctx.strokeStyle = strokeStyle;
             //描画することを宣言する
-            context.beginPath();
+            ctx.beginPath();
             //描き始め（始点）を決定する
-            context.moveTo(x1, y1);
+            ctx.moveTo(x1, y1);
             //始点から指定の座標まで線を引く
-            context.lineTo(x2, y2);
+            ctx.lineTo(x2, y2);
             //引き続き線を引いていく
             //context.lineTo(0, 100);
             //context.lineTo(51, 15);
             //描画を終了する
-            context.closePath();
+            ctx.closePath();
             //上記記述は定義情報である。この命令で線を描く。
-            context.stroke();
+            ctx.stroke();
         }
-        context.restore();
+        ctx.restore();
     };
-    HUD.prototype.drawCircle = function (context, strokeStyle, centerX, centerY, radius) {
-        context.save();
+    HUD.prototype.drawCircle = function (strokeStyle, centerX, centerY, radius) {
+        var ctx = this.context;
+        ctx.save();
         {
-            context.beginPath();
-            context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
             //context.fillStyle = 'green';
             //context.fill();
-            context.lineWidth = 2;
-            context.strokeStyle = strokeStyle;
-            context.stroke();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = strokeStyle;
+            ctx.stroke();
         }
-        context.restore();
+        ctx.restore();
     };
     HUD.prototype.fillText = function (text, font, x, y) {
         var context = this.context;
@@ -1969,9 +1966,9 @@ var HUD = (function () {
         var context = this.context;
         this.drawCross(centerX, centerY, 15);
         var radius = height / 2 * 0.8;
-        this.drawCircle(context, "rgb(255, 255, 255)", centerX, centerY, height / 2 * 0.8);
-        this.drawCircle(context, "rgb(255, 255, 255)", centerX + this.plane.stickPos.y * radius, centerY - this.plane.stickPos.x * radius, 10);
-        this.drawCircle(context, "rgb(255, 255, 255)", centerX + Jflight.mouseX, centerY + Jflight.mouseY, 10);
+        this.drawCircle("rgb(255, 255, 255)", centerX, centerY, height / 2 * 0.8);
+        this.drawCircle("rgb(255, 255, 255)", centerX + this.plane.stickPos.y * radius, centerY - this.plane.stickPos.x * radius, 10);
+        this.drawCircle("rgb(255, 255, 255)", centerX + Jflight.mouseX, centerY + Jflight.mouseY, 10);
         var y = this.plane.rotation.y;
         context.save();
         {

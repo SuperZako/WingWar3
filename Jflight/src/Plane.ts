@@ -13,16 +13,12 @@
 class Plane extends PhysicsState {
 
     // 定数
-
     static readonly  BMAX = 20;    // 弾丸の最大数
     static readonly  MMMAX = 4;    // ミサイルの最大数
     static readonly  WMAX = 6;     // 翼の数
     static readonly  MAXT = 50;    // 機銃の最大温度
 
     // 変数
-
-    // ワールド座標→機体座標への変換行列
-
     protected cosa: number;
     protected cosb: number;
     protected cosc: number;
@@ -31,7 +27,9 @@ class Plane extends PhysicsState {
     protected sinb: number;
     protected sinc: number;
 
+    // ワールド座標→機体座標への変換行列
     matrix = new THREE.Matrix4();
+
     invMatrix = new THREE.Matrix4();
 
     // 機体
@@ -273,35 +271,25 @@ class Plane extends PhysicsState {
         this.matrix.makeRotationFromEuler(a);
 
         // 逆行列も設定
-        this.invMatrix.copy(this.matrix);
         // 直行行列なので、転置行列が逆行列になる
+        this.invMatrix.copy(this.matrix);
         this.invMatrix.transpose();
     }
 
     // ワールド座標を機体座標へ変換する（１次変換のみ）
-
     public worldToLocal(worldVector: THREE.Vector3, localVector: THREE.Vector3) {
         localVector.copy(worldVector);
         localVector.applyMatrix4(this.matrix);
-        //pl.x = pw.x * this.matrix.elements[0] + pw.y * this.matrix.elements[4] + pw.z * this.matrix.elements[8];
-        //pl.y = pw.x * this.matrix.elements[1] + pw.y * this.matrix.elements[5] + pw.z * this.matrix.elements[9];
-        //pl.z = pw.x * this.matrix.elements[2] + pw.y * this.matrix.elements[6] + pw.z * this.matrix.elements[10];
     }
 
     // 機体座標をワールド座標へ変換する（１次変換のみ）
-
     public localToWorld(localVector: THREE.Vector3, worldVector: THREE.Vector3) {
         worldVector.copy(localVector);
         worldVector.applyMatrix4(this.invMatrix);
-
-        // pw.x = pl.x * this.matrix.elements[0] + pl.y * this.matrix.elements[1] + pl.z * this.matrix.elements[2];
-        // pw.y = pl.x * this.matrix.elements[4] + pl.y * this.matrix.elements[5] + pl.z * this.matrix.elements[6];
-        // pw.z = pl.x * this.matrix.elements[8] + pl.y * this.matrix.elements[9] + pl.z * this.matrix.elements[10];
     }
 
 
     // 機銃やミサイルのロック処理
-
     public lockCheck(world: Jflight) {
         let a = new THREE.Vector3();
         let b = new THREE.Vector3();
@@ -543,6 +531,7 @@ class Plane extends PhysicsState {
             ++i;
 
             // 力
+            // af += wing.fVel * this.matrix
             // af.x += (wing.fVel.x * this.matrix.elements[0] + wing.fVel.y * this.matrix.elements[1] + wing.fVel.z * this.matrix.elements[2]);
             // af.y += (wing.fVel.x * this.matrix.elements[4] + wing.fVel.y * this.matrix.elements[5] + wing.fVel.z * this.matrix.elements[6]);
             // af.z += (wing.fVel.x * this.matrix.elements[8] + wing.fVel.y * this.matrix.elements[9] + wing.fVel.z * this.matrix.elements[10]) + wing.mass * Jflight.G;
@@ -978,10 +967,10 @@ class Plane extends PhysicsState {
                 this.localToWorld(dm, oi);
 
                 // ap.position.setPlus(this.position, ni);
-                ap.position.addVectors(this.position, <any>ni);
+                ap.position.addVectors(this.position, ni);
 
                 // ap.velocity.setPlus(this.velocity, oi);
-                ap.velocity.addVectors(this.velocity, <any>oi);
+                ap.velocity.addVectors(this.velocity, oi);
 
                 // 発射向きを決める
 

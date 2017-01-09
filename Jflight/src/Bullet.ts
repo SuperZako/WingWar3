@@ -11,12 +11,6 @@ class Bullet extends PhysicsState {
     public use = 0;               // 使用状態（0で未使用）
     public bom = 0;               // 爆発状態（0で未爆）
 
-    // テンポラリ用オブジェクト
-
-    // protected m_a = new CVector3();
-    // protected m_b = new CVector3();
-    // protected m_vv = new CVector3();
-
     private sphere: THREE.Mesh;
     // コンストラクタ
 

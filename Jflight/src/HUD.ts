@@ -15,37 +15,38 @@ class HUD {
     }
 
     private drawLine(strokeStyle: string, x1: number, y1: number, x2: number, y2: number) {
-        let context = this.context;
-        context.save(); {
+        let ctx = this.context;
+        ctx.save(); {
 
-            context.strokeStyle = strokeStyle;
+            ctx.strokeStyle = strokeStyle;
             //描画することを宣言する
-            context.beginPath();
+            ctx.beginPath();
             //描き始め（始点）を決定する
-            context.moveTo(x1, y1);
+            ctx.moveTo(x1, y1);
             //始点から指定の座標まで線を引く
-            context.lineTo(x2, y2);
+            ctx.lineTo(x2, y2);
             //引き続き線を引いていく
             //context.lineTo(0, 100);
             //context.lineTo(51, 15);
             //描画を終了する
-            context.closePath();
+            ctx.closePath();
 
             //上記記述は定義情報である。この命令で線を描く。
-            context.stroke();
-        } context.restore();
+            ctx.stroke();
+        } ctx.restore();
     }
 
-    private drawCircle(context: CanvasRenderingContext2D, strokeStyle: string, centerX: number, centerY: number, radius: number) {
-        context.save(); {
-            context.beginPath();
-            context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
+    private drawCircle(strokeStyle: string, centerX: number, centerY: number, radius: number) {
+        let ctx = this.context;
+        ctx.save(); {
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
             //context.fillStyle = 'green';
             //context.fill();
-            context.lineWidth = 2;
-            context.strokeStyle = strokeStyle;
-            context.stroke();
-        } context.restore();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = strokeStyle;
+            ctx.stroke();
+        } ctx.restore();
     }
 
     public fillText(text: string, font: string, x: number, y: number) {
@@ -107,12 +108,12 @@ class HUD {
         this.drawCross(centerX, centerY, 15);
 
         let radius = height / 2 * 0.8;
-        this.drawCircle(context, "rgb(255, 255, 255)", centerX, centerY, height / 2 * 0.8);
+        this.drawCircle("rgb(255, 255, 255)", centerX, centerY, height / 2 * 0.8);
 
 
-        this.drawCircle(context, "rgb(255, 255, 255)", centerX + this.plane.stickPos.y * radius, centerY - this.plane.stickPos.x * radius, 10);
+        this.drawCircle("rgb(255, 255, 255)", centerX + this.plane.stickPos.y * radius, centerY - this.plane.stickPos.x * radius, 10);
 
-        this.drawCircle(context, "rgb(255, 255, 255)", centerX + Jflight.mouseX, centerY + Jflight.mouseY, 10);
+        this.drawCircle("rgb(255, 255, 255)", centerX + Jflight.mouseX, centerY + Jflight.mouseY, 10);
 
         let y = this.plane.rotation.y;
 
