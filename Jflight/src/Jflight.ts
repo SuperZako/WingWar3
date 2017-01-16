@@ -61,7 +61,7 @@ class Jflight {
             this.plane.push(new Plane(scene));
         }
 
-        this.hud = new HUD(hudCanvas, this.plane[0]);
+        this.hud = new HUD(hudCanvas, this.plane[0], this);
 
         // 各機体の設定
         this.plane[0].no = 0;
@@ -182,7 +182,7 @@ class Jflight {
         this.plane[0].checkTrans();
 
         // HUD表示
-        this.hud.render(this);
+        this.hud.render();
     }
 
     // メインループ

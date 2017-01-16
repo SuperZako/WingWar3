@@ -605,16 +605,19 @@
     <Content Include="node_modules\three\src\Three.Legacy.js" />
     <Content Include="packages.config" />
     <TypeScriptCompile Include="node_modules\%40types\dat-gui\index.d.ts" />
+    <TypeScriptCompile Include="src\Camera.ts" />
     <TypeScriptCompile Include="src\Helpers\CameraHelper.ts" />
     <TypeScriptCompile Include="src\Scene\Scene.ts" />
     <TypeScriptCompile Include="src\Scene\TitleScene.ts" />
     <TypeScriptCompile Include="src\Sky\Cloud.ts" />
     <TypeScriptCompile Include="src\Sky\SkyShader.ts" />
+    <Content Include="test\blenedr.html" />
     <Content Include="test\clouds.html" />
     <Content Include="test\cloud10.png" />
     <Content Include="test\css\style.css" />
     <Content Include="test\index.html" />
     <Content Include="test\js\controls\OrbitControls.js" />
+    <Content Include="test\js\controls\TrackballControls.js" />
     <Content Include="test\js\Detector.js" />
     <Content Include="test\js\index.js" />
     <Content Include="test\js\libs\dat.gui.min.js" />
@@ -753,6 +756,10 @@
     <Content Include="node_modules\%40types\dat-gui\package.json" />
     <Content Include="node_modules\%40types\dat-gui\README.md" />
     <Content Include="node_modules\%40types\dat-gui\types-metadata.json" />
+    <Content Include="test\suzanne.json" />
+    <Content Include="models\suzanne.json" />
+    <Content Include="models\ground.json" />
+    <Content Include="models\ground.blend" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
@@ -787,6 +794,7 @@
     <TypeScriptCompile Include="src\Missile.ts" />
     <TypeScriptCompile Include="src\Physics\PhysicsState.ts" />
     <TypeScriptCompile Include="src\Plane.ts" />
+    <TypeScriptCompile Include="src\Terrain\Ground.ts" />
     <TypeScriptCompile Include="src\Terrain\Sea.ts" />
     <TypeScriptCompile Include="src\THREEx.KeyboardState.ts" />
     <TypeScriptCompile Include="src\THREEx.WindowResize.ts" />

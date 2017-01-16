@@ -1,104 +1,17 @@
-﻿
+﻿///<reference path="./Scene/Scene.ts" />
+///<reference path="./Scene/TitleScene.ts" />
 
-class HUD {
-    //mouseX: number;
-    //mouseY: number;
-
-    private context: CanvasRenderingContext2D;
-
-    public constructor(private canvas: HTMLCanvasElement, private plane: Plane) {
-        let context = canvas.getContext("2d");
-
-        if (context) {
-            this.context = context;
-        }
-    }
-
-    private drawLine(strokeStyle: string, x1: number, y1: number, x2: number, y2: number) {
-        let ctx = this.context;
-        ctx.save(); {
-
-            ctx.strokeStyle = strokeStyle;
-            //描画することを宣言する
-            ctx.beginPath();
-            //描き始め（始点）を決定する
-            ctx.moveTo(x1, y1);
-            //始点から指定の座標まで線を引く
-            ctx.lineTo(x2, y2);
-            //引き続き線を引いていく
-            //context.lineTo(0, 100);
-            //context.lineTo(51, 15);
-            //描画を終了する
-            ctx.closePath();
-
-            //上記記述は定義情報である。この命令で線を描く。
-            ctx.stroke();
-        } ctx.restore();
-    }
-
-    private drawCircle(strokeStyle: string, centerX: number, centerY: number, radius: number) {
-        let ctx = this.context;
-        ctx.save(); {
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
-            //context.fillStyle = 'green';
-            //context.fill();
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = strokeStyle;
-            ctx.stroke();
-        } ctx.restore();
-    }
-
-    public fillText(text: string, font: string, x: number, y: number) {
-        let context = this.context;
-        context.save(); {
-            context.font = font;//"18px 'ＭＳ Ｐゴシック'";
-            context.fillStyle = "white";
-            context.fillText(text, x, y);
-        } context.restore();
-    }
-
-
-    public strokeRect(strokeStyle: string, x: number, y: number, w: number, h: number) {
-        let context = this.context;
-        context.save(); {
-            context.strokeStyle = strokeStyle;
-            context.strokeRect(x, y, w, h);
-        } context.restore();
-
+class HUD extends Scene {
+    private currentScene: Scene;
+    public constructor(canvas: HTMLCanvasElement, private plane: Plane, private world: Jflight) {
+        super(canvas);
+        this.currentScene = new TitleScene(canvas);
     }
     public drawCross(x: number, y: number, length: number) {
         this.drawLine("rgb(255, 255, 255)", x, y - length, x, y + length);
         this.drawLine("rgb(255, 255, 255)", x - length, y, x + length, y);
     }
-
-    public drawTitle(text: string, font: string, x: number, y: number) {
-        let ctx = this.context;
-        ctx.save(); {
-            ctx.shadowOffsetX = 2;
-            ctx.shadowOffsetY = 2;
-            ctx.shadowColor = "#ff6600";
-
-            ctx.font = font;
-            ctx.fillStyle = "#fc0";
-            ctx.fillText(text, x, y);
-        } ctx.restore();
-
-        ctx.save(); {
-            ctx.shadowOffsetX = 4;
-            ctx.shadowOffsetY = 4;
-            ctx.shadowColor = "black";
-            ctx.shadowBlur = 2;
-
-            ctx.font = font;
-            ctx.fillStyle = "#fc0";
-            ctx.fillText(text, x, y);
-        } ctx.restore();
-    }
-
-
-
-    public render(world: Jflight) {
+    public render() {
         let width = this.canvas.width;
         let height = this.canvas.height;
         let centerX = width / 2;
@@ -137,11 +50,12 @@ class HUD {
         } context.restore();
         this.fillText("Speed=" + this.plane.velocity.length(), "18px 'ＭＳ Ｐゴシック'", 50, 50);
 
-        this.drawTitle("Wing War", "bold 128px 'Racing Sans One'", 50, 50);
-
-        let t = world.plane[this.plane.target].position.clone();
+        let t = this.world.plane[this.plane.target].position.clone();
         let u = CameraHelper.toScreenPosition(t, Main.camera);
 
         this.strokeRect("rgb(0, 255, 0)", u.x - 10, u.y - 10, 20, 20);
+
+
+        //this.currentScene.render();
     }
 }

@@ -7,6 +7,7 @@
 ///<reference path="./Sky/SkyShader.ts" />
 ///<reference path="./Sky/Cloud.ts" />
 ///<reference path="./Terrain/Sea.ts" />
+///<reference path="./Terrain/Ground.ts" />
 
 // main
 // グローバル変数
@@ -22,6 +23,8 @@ namespace Main {
     /* canvas要素のノードオブジェクト */
 
     let canvas: HTMLCanvasElement;
+    let context: CanvasRenderingContext2D;// = canvas.getContext("2d");
+
 
     // standard global variables
     var container: HTMLDivElement;
@@ -42,39 +45,54 @@ namespace Main {
 
     var cloud: Cloud;
 
-    let light: THREE.HemisphereLight;
-    let shadowLight: THREE.DirectionalLight;
-    let backLight: THREE.DirectionalLight;
+    //let light: THREE.HemisphereLight;
+    //let shadowLight: THREE.DirectionalLight;
+    //let backLight: THREE.DirectionalLight;
+    //let ambientLight: THREE.AmbientLight;
+    let directionalLight: THREE.DirectionalLight;
 
     let sea: Sea;
-
     export var keyboard = new THREEx.KeyboardState();
 
     function createLights() {
-        light = new THREE.HemisphereLight(0xffffff, 0xb3858c, 0.65);
-        light.position.set(0, 0, 10000);
+        // ambientLight = new THREE.AmbientLight(0xffffff);
+        /// scene.add(ambientLight);
 
-        shadowLight = new THREE.DirectionalLight(0xffe79d, .7);
-        shadowLight.position.set(8000, -5000, 12000);
-        shadowLight.castShadow = true;
-        // shadowLight.shadowDarkness = .3;
-        shadowLight.shadowMapWidth = 2048;
-        shadowLight.shadowMapHeight = 2048;
+        // skyColorHex : 0xffffff, groundColorHex : 0xffffff, intensity : 0.6
+        var hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.6);
 
-        backLight = new THREE.DirectionalLight(0xffffff, .4);
-        backLight.position.set(20000, -10000, 10000);
-        // backLight.shadowDarkness = .1;
-        //backLight.castShadow = true;
+        //シーンオブジェクトに追加            
+        scene.add(hemiLight);
 
-        scene.add(backLight);
-        scene.add(light);
-        scene.add(shadowLight);
+
+        directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        // directionalLight.position.set(8000, -5000, 12000);
+        scene.add(directionalLight);
+        //light = new THREE.HemisphereLight(0xffffff, 0xb3858c, 0.65);
+        //light.position.set(0, 0, 10000);
+
+        //shadowLight = new THREE.DirectionalLight(0xffe79d, .7);
+        //shadowLight.position.set(8000, -5000, 12000);
+        //shadowLight.castShadow = true;
+        //shadowLight.shadowMapWidth = 2048;
+        //shadowLight.shadowMapHeight = 2048;
+
+        //backLight = new THREE.DirectionalLight(0xffffff, .4);
+        //backLight.position.set(20000, -10000, 10000);
+
+        //scene.add(backLight);
+        //scene.add(light);
+        //scene.add(shadowLight);
     }
 
     // functions
     export function init(): void {
         canvas = <HTMLCanvasElement>document.getElementById("hud");
         canvas.onmousemove = onMouseMove;
+        let _context = canvas.getContext("2d");
+        if (_context) {
+            context = _context;
+        }
         // scene
         scene = new THREE.Scene();
 
@@ -152,15 +170,15 @@ namespace Main {
         ////////////
 
         // GridHelper(大きさ, １マスの大きさ)
-        var grid = new THREE.GridHelper(100000, 100);
-        grid.rotateX(Math.PI / 2);
-        //シーンオブジェクトに追加
-        scene.add(grid);
+        //var grid = new THREE.GridHelper(100000, 100);
+        //grid.rotateX(Math.PI / 2);
+        ////シーンオブジェクトに追加
+        //scene.add(grid);
 
-        // 軸の長さ10000
-        var axis = new THREE.AxisHelper(10000);
-        // sceneに追加
-        scene.add(axis);
+        //// 軸の長さ10000
+        //var axis = new THREE.AxisHelper(10000);
+        //// sceneに追加
+        //scene.add(axis);
 
         // MESHES WITH ANIMATED TEXTURES!
 
@@ -175,6 +193,9 @@ namespace Main {
         cloud = new Cloud(scene);
 
         sea = new Sea(scene);
+
+        let ground = new Ground(scene, "../models/ground.json");
+        if (ground) { }
         if (sea) { }
         // Add Sun Helper
         var sunSphere = new THREE.Mesh(
@@ -185,6 +206,10 @@ namespace Main {
         sunSphere.position.z = - 700000;
         sunSphere.visible = false;
         scene.add(sunSphere);
+
+
+
+        createLights();
 
 
         /// GUI
@@ -218,6 +243,8 @@ namespace Main {
             sunSphere.position./*y*/z = distance * Math.sin(phi) * Math.sin(theta);
             sunSphere.position./*z*/y = -distance * Math.sin(phi) * Math.cos(theta);
 
+            directionalLight.position.copy(sunSphere.position);
+
             sunSphere.visible = effectController.sun;
 
             sky.uniforms.sunPosition.value.copy(sunSphere.position);
@@ -227,15 +254,15 @@ namespace Main {
         }
 
         var gui = new dat.GUI();
-
-        gui.add(effectController, "turbidity", 1.0, 20.0/*, 0.1*/).onChange(guiChanged);
-        gui.add(effectController, "rayleigh", 0.0, 4/*, 0.001*/).onChange(guiChanged);
-        gui.add(effectController, "mieCoefficient", 0.0, 0.1/*, 0.001*/).onChange(guiChanged);
-        gui.add(effectController, "mieDirectionalG", 0.0, 1/*, 0.001*/).onChange(guiChanged);
-        gui.add(effectController, "luminance", 0.0, 2).onChange(guiChanged);
-        gui.add(effectController, "inclination", 0, 1/*, 0.0001*/).onChange(guiChanged);
-        gui.add(effectController, "azimuth", 0, 1/*, 0.0001*/).onChange(guiChanged);
-        gui.add(effectController, "sun").onChange(guiChanged);
+        let skyFolder = gui.addFolder('Sky');
+        skyFolder.add(effectController, "turbidity", 1.0, 20.0/*, 0.1*/).onChange(guiChanged);
+        skyFolder.add(effectController, "rayleigh", 0.0, 4/*, 0.001*/).onChange(guiChanged);
+        skyFolder.add(effectController, "mieCoefficient", 0.0, 0.1/*, 0.001*/).onChange(guiChanged);
+        skyFolder.add(effectController, "mieDirectionalG", 0.0, 1/*, 0.001*/).onChange(guiChanged);
+        skyFolder.add(effectController, "luminance", 0.0, 2).onChange(guiChanged);
+        skyFolder.add(effectController, "inclination", 0, 1/*, 0.0001*/).onChange(guiChanged);
+        skyFolder.add(effectController, "azimuth", 0, 1/*, 0.0001*/).onChange(guiChanged);
+        skyFolder.add(effectController, "sun").onChange(guiChanged);
 
         guiChanged();
         // var explosionTexture = new THREE.TextureLoader().load('images/explosion.jpg');
@@ -246,7 +273,6 @@ namespace Main {
 
         flight = new Jflight(scene, canvas);
 
-        createLights();
     }
 
     function onMouseMove(ev: MouseEvent) {
@@ -314,16 +340,11 @@ namespace Main {
         canvas.height = window.innerHeight;
         //flight.setWidth(window.innerWidth);
         //flight.setHeight(window.innerHeight);
-
-        sea.update();
     }
 
     function render() {
         renderer.render(scene, camera);
-        let context = canvas.getContext("2d");
-        if (context) {
-            flight.render(context);
-        }
+        flight.render(context);
     }
 }
 

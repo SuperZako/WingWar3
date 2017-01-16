@@ -1,0 +1,63 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+</head>
+<body>
+    <script type="text/javascript" src="../node_modules/three/build/three.js"></script>
+    <script src="./js/controls/TrackballControls.js"></script>
+    <script>
+
+        var camera, scene, renderer;
+        var geometry, material, mesh;
+
+        init();
+        animate();
+
+        function init() {
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
+            camera.position.z = 1000;
+
+            scene = new THREE.Scene();
+
+            geometry = new THREE.BoxGeometry(200, 200, 200);
+            material = new THREE.MeshBasicMaterial({
+                color: 0xff0000,
+                wireframe: true
+            });
+
+            mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+
+            //オブジェクト
+            loader = new THREE.JSONLoader();
+            loader.load('suzanne.json', function (geometry, materials) { //第１引数はジオメトリー、第２引数はマテリアルが自動的に取得）
+                var faceMaterial = new THREE.MeshFaceMaterial(materials);
+                json = new THREE.Mesh(geometry, faceMaterial);
+                json.position.set(0, 100, 0);
+                json.scale.set(100, 100, 100);
+                scene.add(json);
+            });
+
+
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            document.body.appendChild(renderer.domElement);
+
+        }
+
+        function animate() {
+
+            requestAnimationFrame(animate);
+
+            mesh.rotation.x += 0.01;
+            mesh.rotation.y += 0.02;
+
+            renderer.render(scene, camera);
+
+        }
+    </script>
+</body>
+</html>

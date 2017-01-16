@@ -59,7 +59,7 @@ class Plane extends PhysicsState {
     public stickVel = new THREE.Vector3();   // 操縦系変化率
 
     public readonly stickR = 0.1;    // 操縦系の感度 (R-センターへの減衰率)
-    public readonly stickA = 0.05;    // 操縦系の感度（A-変化率）
+    public readonly stickA = 0.06;//0.05;    // 操縦系の感度（A-変化率）
 
     public power: number;               // エンジン推力比率（ミリタリー時で9）
     public throttle: number;            // スロットル位置（ミリタリー時で9）
@@ -384,7 +384,7 @@ class Plane extends PhysicsState {
     // キー状態をもとに、スティックやトリガーをセット
     // 実際のキースキャンを処理しているのは、Applet3Dクラス
 
-    protected keyScan(world: Jflight) {
+    protected keyScan(_world: Jflight) {
         this.stickVel.set(0, 0, 0);
         this.boost = false;
         let keyboard = Main.keyboard;
@@ -420,23 +420,14 @@ class Plane extends PhysicsState {
         }
 
         // マウス処理
-        if (world.isMouseMove) {
-            let dx = this.stickPos.x - Jflight.mouseY;
-            let dy = this.stickPos.y + Jflight.mouseX;
-            this.stickVel.x = dx;
-            this.stickVel.y = dy;
+        //if (world.isMouseMove) {
+        //    let dx = this.stickPos.x - Jflight.mouseY;
+        //    let dy = this.stickPos.y + Jflight.mouseX;
+        //    this.stickVel.x = dx;
+        //    this.stickVel.y = dy;
+        //}
 
-            // let length = this.stickVel.abs();
-            //if (length >= 1) {
-            //    this.stickVel.x /= length;
-            //    this.stickVel.y /= length;
-            //}
-            // world.isMouseMove = false;
-        }
-
-        // this.stickPos.addCons(this.stickVel, this.stickA);
-        this.stickPos.addScaledVector(<any>this.stickVel, this.stickA);
-        // this.stickPos.subCons(this.stickPos, this.stickR);
+        this.stickPos.addScaledVector(this.stickVel, this.stickA);
         this.stickPos.addScaledVector(this.stickPos, -this.stickR);
 
         // スティック位置を距離１以内に丸めておく

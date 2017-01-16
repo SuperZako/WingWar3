@@ -775,7 +775,7 @@ var Plane = (function (_super) {
         _this.stickPos = new THREE.Vector3(); // ���c�n�ʒu�ix,y-�X�e�B�b�N,z-�y�_���j
         _this.stickVel = new THREE.Vector3(); // ���c�n�ω���
         _this.stickR = 0.1; // ���c�n�̊��x (R-�Z���^�[�ւ̌�����)
-        _this.stickA = 0.05; // ���c�n�̊��x�iA-�ω����j
+        _this.stickA = 0.06; //0.05;    // ���c�n�̊��x�iA-�ω����j
         // �@�e�n
         _this.bullets = []; // �e�e�ۃI�u�W�F�N�g
         // �~�T�C���n
@@ -1011,7 +1011,7 @@ var Plane = (function (_super) {
     };
     // �L�[��Ԃ��ƂɁA�X�e�B�b�N��g���K�[��Z�b�g
     // ���ۂ̃L�[�X�L������������Ă���̂́AApplet3D�N���X
-    Plane.prototype.keyScan = function (world) {
+    Plane.prototype.keyScan = function (_world) {
         this.stickVel.set(0, 0, 0);
         this.boost = false;
         var keyboard = Main.keyboard;
@@ -1041,15 +1041,13 @@ var Plane = (function (_super) {
             this.stickPos.z = -1;
         }
         // �}�E�X����
-        if (world.isMouseMove) {
-            var dx = this.stickPos.x - Jflight.mouseY;
-            var dy = this.stickPos.y + Jflight.mouseX;
-            this.stickVel.x = dx;
-            this.stickVel.y = dy;
-        }
-        // this.stickPos.addCons(this.stickVel, this.stickA);
+        //if (world.isMouseMove) {
+        //    let dx = this.stickPos.x - Jflight.mouseY;
+        //    let dy = this.stickPos.y + Jflight.mouseX;
+        //    this.stickVel.x = dx;
+        //    this.stickVel.y = dy;
+        //}
         this.stickPos.addScaledVector(this.stickVel, this.stickA);
-        // this.stickPos.subCons(this.stickPos, this.stickR);
         this.stickPos.addScaledVector(this.stickPos, -this.stickR);
         // �X�e�B�b�N�ʒu������P�ȓ�Ɋۂ߂Ă���
         var r = Math.sqrt(this.stickPos.x * this.stickPos.x + this.stickPos.y * this.stickPos.y);
@@ -1581,7 +1579,7 @@ var Jflight = (function () {
         for (var i = 0; i < Jflight.PMAX; i++) {
             this.plane.push(new Plane(scene));
         }
-        this.hud = new HUD(hudCanvas, this.plane[0]);
+        this.hud = new HUD(hudCanvas, this.plane[0], this);
         // �e�@�̂̐ݒ�
         this.plane[0].no = 0;
         this.plane[1].no = 1;
@@ -1676,7 +1674,7 @@ var Jflight = (function () {
         // ���@�̕ϊ��s���O�̂��ߍČv�Z���Ă���
         this.plane[0].checkTrans();
         // HUD�\��
-        this.hud.render(this);
+        this.hud.render();
     };
     // ���C�����[�v
     Jflight.prototype.run = function () {
@@ -1867,16 +1865,15 @@ Jflight.PMAX = 4; // �@�̂̍ő吔
 Jflight.G = -9.8; // �d�͉����x
 Jflight.DT = 0.05; // �v�Z�X�e�b�v��
 Jflight.obj = []; // �@�̂̌`��i�O�p�`�̏W���j
-var HUD = (function () {
-    function HUD(canvas, plane) {
+var Scene = (function () {
+    function Scene(canvas) {
         this.canvas = canvas;
-        this.plane = plane;
         var context = canvas.getContext("2d");
         if (context) {
             this.context = context;
         }
     }
-    HUD.prototype.drawLine = function (strokeStyle, x1, y1, x2, y2) {
+    Scene.prototype.drawLine = function (strokeStyle, x1, y1, x2, y2) {
         var ctx = this.context;
         ctx.save();
         {
@@ -1897,7 +1894,7 @@ var HUD = (function () {
         }
         ctx.restore();
     };
-    HUD.prototype.drawCircle = function (strokeStyle, centerX, centerY, radius) {
+    Scene.prototype.drawCircle = function (strokeStyle, centerX, centerY, radius) {
         var ctx = this.context;
         ctx.save();
         {
@@ -1911,7 +1908,7 @@ var HUD = (function () {
         }
         ctx.restore();
     };
-    HUD.prototype.fillText = function (text, font, x, y) {
+    Scene.prototype.fillText = function (text, font, x, y) {
         var context = this.context;
         context.save();
         {
@@ -1921,26 +1918,84 @@ var HUD = (function () {
         }
         context.restore();
     };
-    HUD.prototype.strokeRect = function (strokeStyle, x, y, w, h) {
-        var context = this.context;
-        context.save();
+    Scene.prototype.strokeRect = function (strokeStyle, x, y, w, h) {
+        var ctx = this.context;
+        ctx.save();
         {
-            context.strokeStyle = strokeStyle;
-            context.strokeRect(x, y, w, h);
+            ctx.strokeStyle = strokeStyle;
+            ctx.strokeRect(x, y, w, h);
         }
-        context.restore();
+        ctx.restore();
     };
-    HUD.prototype.drawCross = function (x, y, length) {
-        this.drawLine("rgb(255, 255, 255)", x, y - length, x, y + length);
-        this.drawLine("rgb(255, 255, 255)", x - length, y, x + length, y);
+    Scene.prototype.drawRoundRect = function (style, x, y, width, height, radius, stroke) {
+        if (radius === void 0) { radius = 5; }
+        if (stroke === void 0) { stroke = false; }
+        var ctx = this.context;
+        //if (typeof stroke == 'undefined') {
+        //    stroke = true;
+        //}
+        //if (typeof radius === 'undefined') {
+        //    radius = 5;
+        //}
+        //if (typeof radius === 'number') {
+        //    radius = { tl: radius, tr: radius, br: radius, bl: radius };
+        //} else {
+        //    var defaultRadius = { tl: 0, tr: 0, br: 0, bl: 0 };
+        //    for (var side in defaultRadius) {
+        //        radius[side] = radius[side] || defaultRadius[side];
+        //    }
+        //}
+        var tl = radius;
+        var tr = radius;
+        var br = radius;
+        var bl = radius;
+        ctx.save();
+        {
+            ctx.beginPath();
+            ctx.moveTo(x + tl, y);
+            ctx.lineTo(x + width - tr, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + tr);
+            ctx.lineTo(x + width, y + height - br);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - br, y + height);
+            ctx.lineTo(x + bl, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - bl);
+            ctx.lineTo(x, y + tl);
+            ctx.quadraticCurveTo(x, y, x + tl, y);
+            ctx.closePath();
+            //if (fill) {
+            //    ctx.fill();
+            //}
+            if (stroke) {
+                ctx.stroke();
+            }
+            else {
+                ctx.fillStyle = style;
+                ctx.fill();
+            }
+        }
+        ctx.restore();
     };
-    HUD.prototype.drawTitle = function (text, font, x, y) {
+    Scene.prototype.render = function () {
+    };
+    return Scene;
+}());
+///<reference path="./Scene.ts" />
+var TitleScene = (function (_super) {
+    __extends(TitleScene, _super);
+    function TitleScene(canvas) {
+        var _this = _super.call(this, canvas) || this;
+        _this.canvas = canvas;
+        return _this;
+    }
+    TitleScene.prototype.drawTitle = function (text, font, x, y) {
         var ctx = this.context;
         ctx.save();
         {
             ctx.shadowOffsetX = 2;
             ctx.shadowOffsetY = 2;
             ctx.shadowColor = "#ff6600";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
             ctx.font = font;
             ctx.fillStyle = "#fc0";
             ctx.fillText(text, x, y);
@@ -1952,13 +2007,40 @@ var HUD = (function () {
             ctx.shadowOffsetY = 4;
             ctx.shadowColor = "black";
             ctx.shadowBlur = 2;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
             ctx.font = font;
             ctx.fillStyle = "#fc0";
             ctx.fillText(text, x, y);
         }
         ctx.restore();
     };
-    HUD.prototype.render = function (world) {
+    TitleScene.prototype.render = function () {
+        var width = this.canvas.width;
+        var height = this.canvas.height;
+        var centerX = width / 2;
+        var centerY = height / 2;
+        this.drawRoundRect("rgba(0, 0, 0, 0.6)", 50, 50, width - 100, height - 100);
+        this.drawTitle("Wing War", "bold 128px 'Racing Sans One'", centerX, centerY - height / 4);
+    };
+    return TitleScene;
+}(Scene));
+///<reference path="./Scene/Scene.ts" />
+///<reference path="./Scene/TitleScene.ts" />
+var HUD = (function (_super) {
+    __extends(HUD, _super);
+    function HUD(canvas, plane, world) {
+        var _this = _super.call(this, canvas) || this;
+        _this.plane = plane;
+        _this.world = world;
+        _this.currentScene = new TitleScene(canvas);
+        return _this;
+    }
+    HUD.prototype.drawCross = function (x, y, length) {
+        this.drawLine("rgb(255, 255, 255)", x, y - length, x, y + length);
+        this.drawLine("rgb(255, 255, 255)", x - length, y, x + length, y);
+    };
+    HUD.prototype.render = function () {
         var width = this.canvas.width;
         var height = this.canvas.height;
         var centerX = width / 2;
@@ -1987,13 +2069,13 @@ var HUD = (function () {
         }
         context.restore();
         this.fillText("Speed=" + this.plane.velocity.length(), "18px 'ＭＳ Ｐゴシック'", 50, 50);
-        this.drawTitle("Wing War", "bold 128px 'Racing Sans One'", 50, 50);
-        var t = world.plane[this.plane.target].position.clone();
+        var t = this.world.plane[this.plane.target].position.clone();
         var u = CameraHelper.toScreenPosition(t, Main.camera);
         this.strokeRect("rgb(0, 255, 0)", u.x - 10, u.y - 10, 20, 20);
+        //this.currentScene.render();
     };
     return HUD;
-}());
+}(Scene));
 /**
  * @author zz85 / https://github.com/zz85
  *
@@ -2073,7 +2155,7 @@ var MathHelper;
 ///<reference path="../Helpers/MathHelper.ts" />
 var Cloud = (function () {
     function Cloud(scene) {
-        var geometry = new THREE.DodecahedronGeometry(1000, 1);
+        var geometry = new THREE.DodecahedronGeometry(100, 1);
         var material = new THREE.MeshLambertMaterial({
             color: 0xffffff,
             shading: THREE.FlatShading,
@@ -2083,27 +2165,27 @@ var Cloud = (function () {
         var cube = new THREE.Mesh(geometry, material);
         cube.scale.x = 2;
         cube.scale.y = 2;
-        cube.position.set(0, 0, 10000);
+        cube.position.set(0, 0, 3000);
         scene.add(cube);
     }
     return Cloud;
 }());
 var Sea = (function () {
+    //private wave: number[] = [];
+    //private tick = 0;
     function Sea(scene) {
-        this.wave = [];
-        this.tick = 0;
-        var waterGeo = new THREE.BoxGeometry(1000000, 1000000, 100, 100, 100);
-        for (var i = 0; i < waterGeo.vertices.length; i++) {
-            var vertex = waterGeo.vertices[i];
-            if (vertex.z > 0) {
-                vertex.z += MathHelper.randInRange(-100, 100);
-            }
-            vertex.x += MathHelper.randInRange(-250, 250);
-            vertex.y += MathHelper.randInRange(-250, 250);
-            this.wave.push(MathHelper.randInRange(0, 100));
-        }
-        waterGeo.computeFaceNormals();
-        waterGeo.computeVertexNormals();
+        var waterGeo = new THREE.BoxGeometry(1000000, 1000000, 100); //, 100, 100);
+        //for (var i = 0; i < waterGeo.vertices.length; i++) {
+        //    var vertex = waterGeo.vertices[i];
+        //    if (vertex.z > 0) {
+        //        vertex.z += MathHelper.randInRange(-100, 100);
+        //    }
+        //    vertex.x += MathHelper.randInRange(-250, 250);
+        //    vertex.y += MathHelper.randInRange(-250, 250);
+        //    this.wave.push(MathHelper.randInRange(0, 100));
+        //}
+        //waterGeo.computeFaceNormals();
+        //waterGeo.computeVertexNormals();
         this.geometry = waterGeo;
         var mesh = new THREE.Mesh(waterGeo, new THREE.MeshLambertMaterial({
             color: 0x6092c1,
@@ -2117,18 +2199,27 @@ var Sea = (function () {
         mesh.receiveShadow = true;
         scene.add(mesh);
     }
-    Sea.prototype.update = function () {
-        this.tick++;
-        var i = 0;
-        for (var _i = 0, _a = this.geometry.vertices; _i < _a.length; _i++) {
-            var vertex = _a[_i];
-            if (vertex.z > 0) {
-                vertex.z += Math.sin(this.tick * .015 + this.wave[i++]) * 0.04;
-            }
-        }
-        this.geometry.verticesNeedUpdate = true;
-    };
     return Sea;
+}());
+var Ground = (function () {
+    function Ground(scene, _url) {
+        //オブジェクト
+        //let loader = new THREE.JSONLoader();
+        //loader.load(url, (geometry, materials) => { //第１引数はジオメトリー、第２引数はマテリアルが自動的に取得
+        //    var faceMaterial = new THREE.MeshFaceMaterial(materials);
+        //    let mesh = new THREE.Mesh(geometry, faceMaterial);
+        //    // json.position.set(0, 100, 0);
+        //    mesh.scale.set(1000, 1000, 1000);
+        //    mesh.rotation.x = Math.PI / 2;
+        //    scene.add(mesh);
+        //});
+        var geometry = new THREE.PlaneGeometry(10000, 10000);
+        var material = new THREE.MeshBasicMaterial({ color: 0x008000, side: THREE.DoubleSide });
+        var plane = new THREE.Mesh(geometry, material);
+        plane.position.set(0, 0, 0.1);
+        scene.add(plane);
+    }
+    return Ground;
 }());
 ///<reference path="./Helpers/CameraHelper.ts" />
 ///<reference path="THREEx.KeyboardState.ts" />
@@ -2138,12 +2229,14 @@ var Sea = (function () {
 ///<reference path="./Sky/SkyShader.ts" />
 ///<reference path="./Sky/Cloud.ts" />
 ///<reference path="./Terrain/Sea.ts" />
+///<reference path="./Terrain/Ground.ts" />
 var Main;
 (function (Main) {
     "use strict";
     var flight;
     /* canvas要素のノードオブジェクト */
     var canvas;
+    var context; // = canvas.getContext("2d");
     // standard global variables
     var container;
     var scene;
@@ -2156,32 +2249,44 @@ var Main;
     // var man: Billboard;
     // var controls: THREE.OrbitControls;
     var cloud;
-    var light;
-    var shadowLight;
-    var backLight;
+    //let light: THREE.HemisphereLight;
+    //let shadowLight: THREE.DirectionalLight;
+    //let backLight: THREE.DirectionalLight;
+    //let ambientLight: THREE.AmbientLight;
+    var directionalLight;
     var sea;
     Main.keyboard = new THREEx.KeyboardState();
     function createLights() {
-        light = new THREE.HemisphereLight(0xffffff, 0xb3858c, 0.65);
-        light.position.set(0, 0, 10000);
-        shadowLight = new THREE.DirectionalLight(0xffe79d, .7);
-        shadowLight.position.set(8000, -5000, 12000);
-        shadowLight.castShadow = true;
-        // shadowLight.shadowDarkness = .3;
-        shadowLight.shadowMapWidth = 2048;
-        shadowLight.shadowMapHeight = 2048;
-        backLight = new THREE.DirectionalLight(0xffffff, .4);
-        backLight.position.set(20000, -10000, 10000);
-        // backLight.shadowDarkness = .1;
-        //backLight.castShadow = true;
-        scene.add(backLight);
-        scene.add(light);
-        scene.add(shadowLight);
+        // ambientLight = new THREE.AmbientLight(0xffffff);
+        /// scene.add(ambientLight);
+        // skyColorHex : 0xffffff, groundColorHex : 0xffffff, intensity : 0.6
+        var hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.6);
+        //シーンオブジェクトに追加            
+        scene.add(hemiLight);
+        directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        // directionalLight.position.set(8000, -5000, 12000);
+        scene.add(directionalLight);
+        //light = new THREE.HemisphereLight(0xffffff, 0xb3858c, 0.65);
+        //light.position.set(0, 0, 10000);
+        //shadowLight = new THREE.DirectionalLight(0xffe79d, .7);
+        //shadowLight.position.set(8000, -5000, 12000);
+        //shadowLight.castShadow = true;
+        //shadowLight.shadowMapWidth = 2048;
+        //shadowLight.shadowMapHeight = 2048;
+        //backLight = new THREE.DirectionalLight(0xffffff, .4);
+        //backLight.position.set(20000, -10000, 10000);
+        //scene.add(backLight);
+        //scene.add(light);
+        //scene.add(shadowLight);
     }
     // functions
     function init() {
         canvas = document.getElementById("hud");
         canvas.onmousemove = onMouseMove;
+        var _context = canvas.getContext("2d");
+        if (_context) {
+            context = _context;
+        }
         // scene
         scene = new THREE.Scene();
         // camera
@@ -2230,14 +2335,14 @@ var Main;
         // CUSTOM //
         ////////////
         // GridHelper(大きさ, １マスの大きさ)
-        var grid = new THREE.GridHelper(100000, 100);
-        grid.rotateX(Math.PI / 2);
-        //シーンオブジェクトに追加
-        scene.add(grid);
-        // 軸の長さ10000
-        var axis = new THREE.AxisHelper(10000);
-        // sceneに追加
-        scene.add(axis);
+        //var grid = new THREE.GridHelper(100000, 100);
+        //grid.rotateX(Math.PI / 2);
+        ////シーンオブジェクトに追加
+        //scene.add(grid);
+        //// 軸の長さ10000
+        //var axis = new THREE.AxisHelper(10000);
+        //// sceneに追加
+        //scene.add(axis);
         // MESHES WITH ANIMATED TEXTURES!
         // man = new Billboard(scene);
         // Add Sky Mesh
@@ -2245,6 +2350,8 @@ var Main;
         scene.add(sky.mesh);
         cloud = new Cloud(scene);
         sea = new Sea(scene);
+        var ground = new Ground(scene, "../models/ground.json");
+        if (ground) { }
         if (sea) { }
         // Add Sun Helper
         var sunSphere = new THREE.Mesh(new THREE.SphereBufferGeometry(20000, 16, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
@@ -2252,6 +2359,7 @@ var Main;
         sunSphere.position.z = -700000;
         sunSphere.visible = false;
         scene.add(sunSphere);
+        createLights();
         /// GUI
         var effectController = {
             turbidity: 10,
@@ -2276,25 +2384,26 @@ var Main;
             sunSphere.position.x = distance * Math.cos(phi);
             sunSphere.position.z = distance * Math.sin(phi) * Math.sin(theta);
             sunSphere.position.y = -distance * Math.sin(phi) * Math.cos(theta);
+            directionalLight.position.copy(sunSphere.position);
             sunSphere.visible = effectController.sun;
             sky.uniforms.sunPosition.value.copy(sunSphere.position);
             Main.renderer.render(scene, Main.camera);
         }
         var gui = new dat.GUI();
-        gui.add(effectController, "turbidity", 1.0, 20.0 /*, 0.1*/).onChange(guiChanged);
-        gui.add(effectController, "rayleigh", 0.0, 4 /*, 0.001*/).onChange(guiChanged);
-        gui.add(effectController, "mieCoefficient", 0.0, 0.1 /*, 0.001*/).onChange(guiChanged);
-        gui.add(effectController, "mieDirectionalG", 0.0, 1 /*, 0.001*/).onChange(guiChanged);
-        gui.add(effectController, "luminance", 0.0, 2).onChange(guiChanged);
-        gui.add(effectController, "inclination", 0, 1 /*, 0.0001*/).onChange(guiChanged);
-        gui.add(effectController, "azimuth", 0, 1 /*, 0.0001*/).onChange(guiChanged);
-        gui.add(effectController, "sun").onChange(guiChanged);
+        var skyFolder = gui.addFolder('Sky');
+        skyFolder.add(effectController, "turbidity", 1.0, 20.0 /*, 0.1*/).onChange(guiChanged);
+        skyFolder.add(effectController, "rayleigh", 0.0, 4 /*, 0.001*/).onChange(guiChanged);
+        skyFolder.add(effectController, "mieCoefficient", 0.0, 0.1 /*, 0.001*/).onChange(guiChanged);
+        skyFolder.add(effectController, "mieDirectionalG", 0.0, 1 /*, 0.001*/).onChange(guiChanged);
+        skyFolder.add(effectController, "luminance", 0.0, 2).onChange(guiChanged);
+        skyFolder.add(effectController, "inclination", 0, 1 /*, 0.0001*/).onChange(guiChanged);
+        skyFolder.add(effectController, "azimuth", 0, 1 /*, 0.0001*/).onChange(guiChanged);
+        skyFolder.add(effectController, "sun").onChange(guiChanged);
         guiChanged();
         // var explosionTexture = new THREE.TextureLoader().load('images/explosion.jpg');
         // boomer = new TextureAnimator(explosionTexture, 4, 4, 16, 55); // texture, #horiz, #vert, #total, duration.
         // var explosionMaterial = new THREE.MeshBasicMaterial({ map: explosionTexture });
         flight = new Jflight(scene, canvas);
-        createLights();
     }
     Main.init = init;
     function onMouseMove(ev) {
@@ -2348,18 +2457,30 @@ var Main;
         canvas.height = window.innerHeight;
         //flight.setWidth(window.innerWidth);
         //flight.setHeight(window.innerHeight);
-        sea.update();
     }
     function render() {
         Main.renderer.render(scene, Main.camera);
-        var context = canvas.getContext("2d");
-        if (context) {
-            flight.render(context);
-        }
+        flight.render(context);
     }
 })(Main || (Main = {}));
 Main.init();
 Main.animate();
+// camera
+var SCREEN_WIDTH = window.innerWidth;
+var SCREEN_HEIGHT = window.innerHeight;
+var VIEW_ANGLE = 90;
+var ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT;
+var NEAR = 0.1;
+var FAR = 2000000;
+var Camera = (function () {
+    function Camera() {
+        //camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+        //scene.add(camera);
+        //camera.position.z = SCREEN_HEIGHT / 2;
+        //camera.lookAt(scene.position);
+    }
+    return Camera;
+}());
 var Vector3Helper;
 (function (Vector3Helper) {
     var result = new THREE.Vector3();
