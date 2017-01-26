@@ -59,6 +59,54 @@ var CameraHelper;
     }
     CameraHelper.toScreenPosition = toScreenPosition;
 })(CameraHelper || (CameraHelper = {}));
+///<reference path="./Helpers/CameraHelper.ts" />
+var Camera = (function () {
+    function Camera(scene) {
+        this.positionOffset = new THREE.Vector3();
+        this.targetOffset = new THREE.Vector3();
+        this.positionOffset.z = 5;
+        this.targetOffset.z = -1000;
+        // camera
+        var SCREEN_WIDTH = window.innerWidth;
+        var SCREEN_HEIGHT = window.innerHeight;
+        var VIEW_ANGLE = 90;
+        var ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT;
+        var NEAR = 0.1;
+        var FAR = 2000000;
+        var camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+        scene.add(camera);
+        camera.position.z = SCREEN_HEIGHT / 2;
+        camera.lookAt(scene.position);
+        this.camera = camera;
+        this.dummyCamera = this.camera.clone();
+    }
+    Camera.prototype.getCamera = function () {
+        return this.camera;
+    };
+    Camera.prototype.update = function () {
+        var target = this.target;
+        var v1 = this.positionOffset.clone();
+        var v2 = this.targetOffset.clone();
+        var matrix = CameraHelper.worldToView(target.matrix);
+        v1.applyMatrix4(matrix);
+        v1.add(target.position);
+        v2.applyMatrix4(matrix);
+        v2.add(target.position);
+        var xAxis = new THREE.Vector3();
+        var yAxis = new THREE.Vector3();
+        var zAxis = new THREE.Vector3();
+        matrix.extractBasis(xAxis, yAxis, zAxis);
+        this.dummyCamera.up.copy(yAxis);
+        this.dummyCamera.position.copy(v1);
+        this.dummyCamera.lookAt(v2);
+        this.camera.quaternion.slerp(this.dummyCamera.quaternion, 0.5);
+        this.camera.position.lerp(this.dummyCamera.position, 0.5);
+    };
+    Camera.prototype.setTarget = function (plane) {
+        this.target = plane;
+    };
+    return Camera;
+}());
 // THREEx.KeyboardState.js keep the current state of the keyboard.
 // It is possible to query it at any time. No need of an event.
 // This is particularly convenient in loop driven case, like in
@@ -231,6 +279,22 @@ var THREEx;
     };
     THREEx.KeyboardState = KeyboardState;
 })(THREEx || (THREEx = {}));
+var MouseState = (function () {
+    function MouseState(domElement) {
+        if (domElement === void 0) { domElement = document; }
+        var _this = this;
+        this.domElement = domElement;
+        this.onMouseMove = function (ev) {
+            var target = ev.target;
+            var rect = target.getBoundingClientRect();
+            _this.x = ev.clientX - rect.left;
+            _this.y = ev.clientY - rect.top;
+        };
+        // bind keyEvents
+        this.domElement.addEventListener("onmousemove", this.onMouseMove, false);
+    }
+    return MouseState;
+}());
 // This THREEx helper makes it easy to handle window resize.
 // It will update renderer and camera when window is resized.
 //
@@ -276,6 +340,99 @@ var THREEx;
     }
     THREEx.WindowResize = WindowResize;
 })(THREEx || (THREEx = {}));
+var StateMachine = (function () {
+    function StateMachine(owner) {
+        this.owner = owner;
+        //this.owner = owner;
+        //this.m_pCurrentState = null;
+        //this.m_pPreviousState = null;
+        //this.m_pGlobalState = null;
+    }
+    //@Override
+    //protected void finalize() throws Throwable {
+    //    super.finalize();
+    //}
+    //use these methods to initialize the FSM
+    StateMachine.prototype.SetCurrentState = function (s) {
+        this.currentState = s;
+    };
+    StateMachine.prototype.SetGlobalState = function (s) {
+        this.globalState = s;
+    };
+    StateMachine.prototype.SetPreviousState = function (s) {
+        this.previousState = s;
+    };
+    //call this to update the FSM
+    StateMachine.prototype.Update = function () {
+        //if a global state exists, call its execute method, else do nothing
+        if (this.globalState !== null) {
+            this.globalState.execute(this.owner);
+        }
+        //same for the current state
+        if (this.currentState !== null) {
+            this.currentState.execute(this.owner);
+        }
+    };
+    StateMachine.prototype.HandleMessage = function (msg) {
+        //first see if the current state is valid and that it can handle
+        //the message
+        if (this.currentState != null && this.currentState.onMessage(this.owner, msg)) {
+            return true;
+        }
+        //if not, and if a global state has been implemented, send 
+        //the message to the global state
+        if (this.globalState != null && this.globalState.onMessage(this.owner, msg)) {
+            return true;
+        }
+        return false;
+    };
+    //change to a new state
+    StateMachine.prototype.ChangeState = function (pNewState) {
+        //assert pNewState != null : "<StateMachine::ChangeState>: trying to change to NULL state";
+        //keep a record of the previous state
+        this.previousState = this.currentState;
+        //call the exit method of the existing state
+        this.currentState.exit(this.owner);
+        //change state to the new state
+        this.currentState = pNewState;
+        //call the entry method of the new state
+        this.currentState.enter(this.owner);
+    };
+    ////change state back to the previous state
+    //public void RevertToPreviousState() {
+    //    ChangeState(m_pPreviousState);
+    //}
+    //returns true if the current state's type is equal to the type of the
+    //class passed as a parameter. 
+    StateMachine.prototype.isInState = function (st) {
+        //return this.m_pCurrentState/*.getClass()*/ == st/*.getClass()*/;
+        return this.currentState.getName() === st.getName();
+    };
+    StateMachine.prototype.CurrentState = function () {
+        return this.currentState;
+    };
+    StateMachine.prototype.GlobalState = function () {
+        return this.globalState;
+    };
+    //public State<entity_type> PreviousState() {
+    //    return m_pPreviousState;
+    //}
+    ////only ever used during debugging to grab the name of the current state
+    StateMachine.prototype.GetNameOfCurrentState = function () {
+        //let s = this.m_pCurrentState.getClass().getName().split("\\.");
+        //let s = this.m_pCurrentState.getName().split("\\.");
+        //if (s.length > 0) {
+        //    return s[s.length - 1];
+        //}
+        return this.currentState.getName();
+    };
+    return StateMachine;
+}());
+var State = (function () {
+    function State() {
+    }
+    return State;
+}());
 var PhysicsState = (function () {
     function PhysicsState() {
         this.position = new THREE.Vector3(); // 位置（ワールド座標系）
@@ -458,13 +615,13 @@ var Bullet = (function (_super) {
     // �e�۔��ˏ�����Jflight�N���X���ōs���Ă���
     Bullet.prototype.move = function (world, plane) {
         // �d�͉���
-        this.velocity.z += Jflight.G * Jflight.DT;
+        this.velocity.z += Game.G * Game.DT;
         // ��O�̈ʒu��ۑ�
         // this.oldPosition.set(this.position.x, this.position.y, this.position.z);
         this.oldPosition.copy(this.position);
         // �ړ�
         // this.position.addCons(this.velocity, Jflight.DT);
-        this.position.addScaledVector(this.velocity, Jflight.DT);
+        this.position.addScaledVector(this.velocity, Game.DT);
         this.use--;
         // �e�ۂ�ړ�������
         if (this.use > 0) {
@@ -504,7 +661,7 @@ var Bullet = (function (_super) {
             //this.m_vv.setCons(<any>this.velocity, Jflight.DT);
             var v = new THREE.Vector3();
             v.copy(this.velocity);
-            v.multiplyScalar(Jflight.DT);
+            v.multiplyScalar(Game.DT);
             //let v0 = this.m_vv.abs();
             var v0 = v.length();
             // let l = this.m_a.abs() + this.m_b.abs();
@@ -673,7 +830,7 @@ var Missile = (function (_super) {
             return;
         }
         // �d�͉���
-        this.velocity.z += Jflight.G * Jflight.DT;
+        this.velocity.z += Game.G * Game.DT;
         // �z�[�~���O�v�Z
         this.horming(world, plane);
         // �~�T�C�����[�^�[�v�Z
@@ -683,7 +840,7 @@ var Missile = (function (_super) {
         this.oldPositions[this.use % Missile.MOMAX].copy(this.position);
         // �~�T�C���ړ�
         // this.position.addCons(this.velocity, Jflight.DT);
-        this.position.addScaledVector(this.velocity, Jflight.DT);
+        this.position.addScaledVector(this.velocity, Game.DT);
         this.use--;
         // �^�[�Q�b�g�Ƃ̓����蔻��
         // ���b�N���Ă���ΏۂƂ̂ݓ����蔻�肷��
@@ -744,10 +901,36 @@ var Missile = (function (_super) {
 }(PhysicsState));
 // �萔
 Missile.MOMAX = 50; // ���̒����̍ő�l
+var FlightRecorder = (function () {
+    function FlightRecorder() {
+        this.positions = [];
+        this.matrices = [];
+    }
+    FlightRecorder.prototype.push = function (position, matrix) {
+        this.positions.push(position.clone());
+        this.matrices.push(matrix.clone());
+        if (this.positions.length > 100) {
+            this.positions.shift();
+            this.matrices.shift();
+        }
+    };
+    FlightRecorder.prototype.tail = function (n) {
+        if (n === void 0) { n = 0; }
+        if (this.positions.length - (n + 1) >= 0) {
+            return {
+                position: this.positions[this.positions.length - (n + 1)],
+                matrix: this.matrices[this.positions.length - (n + 1)]
+            };
+        }
+        return null;
+    };
+    return FlightRecorder;
+}());
 ///<reference path="./Physics/PhysicsState.ts" />
 ///<reference path="Wing.ts" />
 ///<reference path="Bullet.ts" />
 ///<reference path="Missile.ts" />
+///<reference path="FlightRecorder.ts" />
 //
 // Plane
 // �@�̃N���X
@@ -780,6 +963,7 @@ var Plane = (function (_super) {
         _this.bullets = []; // �e�e�ۃI�u�W�F�N�g
         // �~�T�C���n
         _this.aam = []; // �e�~�T�C���I�u�W�F�N�g
+        _this.flightRecorder = new FlightRecorder();
         for (var i = 0; i < Plane.BMAX; i++) {
             _this.bullets.push(new Bullet(scene));
         }
@@ -791,18 +975,20 @@ var Plane = (function (_super) {
         }
         _this.aamTarget = new Array(Plane.MMMAX);
         _this.posInit();
-        var material = new THREE.LineBasicMaterial({ color: 0xffffff });
-        var geometry = new THREE.Geometry();
-        for (var _i = 0, _a = Jflight.obj; _i < _a.length; _i++) {
-            var vertices = _a[_i];
-            geometry.vertices.push(vertices[0].clone());
-            geometry.vertices.push(vertices[1].clone());
-            geometry.vertices.push(vertices[2].clone());
-        }
-        _this.line = new THREE.Line(geometry, material);
-        scene.add(_this.line);
+        //�I�u�W�F�N�g
+        var loader = new THREE.JSONLoader();
+        loader.load('../models/a6m5.json', function (geometry, materials) {
+            var faceMaterial = new THREE.MeshFaceMaterial(materials);
+            _this.mesh = new THREE.Mesh(geometry, faceMaterial);
+            _this.mesh.castShadow = true;
+            scene.add(_this.mesh);
+            //  this.shadowMesh = new THREE.ShadowMesh(cube);
+        });
         return _this;
     }
+    Plane.prototype.getFlightRecorder = function () {
+        return this.flightRecorder;
+    };
     // �e�ϐ������������
     Plane.prototype.posInit = function () {
         this.position.x = (Math.random() - 0.5) * 1000 - 8000;
@@ -946,7 +1132,7 @@ var Plane = (function (_super) {
             dis[m] = 1e30;
             nno[m] = -1;
         }
-        for (var m = 0; m < Jflight.PMAX; m++) {
+        for (var m = 0; m < Game.PMAX; m++) {
             // �ڕW�����݂��Ă���΃��b�N���X�g�ɒǉ�
             if (m !== this.no && world.plane[m].use) {
                 // �ڕW�Ƃ̋�������߂�
@@ -1066,7 +1252,7 @@ var Plane = (function (_super) {
         if (this.gunTarget >= 0 && world.plane[this.gunTarget].use) {
             // ��ڕW�̍��W��X�N���[�����W�ɕϊ�
             // world.change3d(this, world.plane[this.gunTarget].position, dm);
-            var camera = Main.camera.clone();
+            var camera = Main.camera.getCamera().clone();
             camera.setRotationFromMatrix(CameraHelper.worldToView(this.matrix));
             camera.position.copy(this.position);
             var p = CameraHelper.toScreenPosition(world.plane[this.gunTarget].position, camera);
@@ -1129,7 +1315,7 @@ var Plane = (function (_super) {
             // af.z += (wing.fVel.x * this.matrix.elements[8] + wing.fVel.y * this.matrix.elements[9] + wing.fVel.z * this.matrix.elements[10]) + wing.mass * Jflight.G;
             v.copy(wing.fVel);
             v.applyMatrix4(this.invMatrix);
-            v.z += wing.mass * Jflight.G;
+            v.z += wing.mass * Game.G;
             af.add(v);
             // ���[�����g�i�͂Ɨ��ʒu�Ƃ̊O�ρj
             // am.x -= (wing.pVel.y * wing.fVel.z - wing.pVel.z * wing.fVel.y);
@@ -1141,15 +1327,15 @@ var Plane = (function (_super) {
             am.sub(v);
         }
         // �p�x�ω���ϕ�
-        this.vaVel.x += am.x / this.iMass.x * Jflight.DT;
-        this.vaVel.y += am.y / this.iMass.y * Jflight.DT;
-        this.vaVel.z += am.z / this.iMass.z * Jflight.DT;
+        this.vaVel.x += am.x / this.iMass.x * Game.DT;
+        this.vaVel.y += am.y / this.iMass.y * Game.DT;
+        this.vaVel.z += am.z / this.iMass.z * Game.DT;
         //let rotX = (this.vaVel.x * this.cosb + this.vaVel.z * this.sinb) * Jflight.DT;
         //let rotY = (this.vaVel.y + (this.vaVel.x * this.sinb - this.vaVel.z * this.cosb) * this.sina / this.cosa) * Jflight.DT;
         //let rotZ = (-this.vaVel.x * this.sinb + this.vaVel.z * this.cosb) / this.cosa * Jflight.DT;
-        this.rotation.x += (this.vaVel.x * this.cosb + this.vaVel.z * this.sinb) * Jflight.DT;
-        this.rotation.y += (this.vaVel.y + (this.vaVel.x * this.sinb - this.vaVel.z * this.cosb) * this.sina / this.cosa) * Jflight.DT;
-        this.rotation.z += (-this.vaVel.x * this.sinb + this.vaVel.z * this.cosb) / this.cosa * Jflight.DT;
+        this.rotation.x += (this.vaVel.x * this.cosb + this.vaVel.z * this.sinb) * Game.DT;
+        this.rotation.y += (this.vaVel.y + (this.vaVel.x * this.sinb - this.vaVel.z * this.cosb) * this.sina / this.cosa) * Game.DT;
+        this.rotation.z += (-this.vaVel.x * this.sinb + this.vaVel.z * this.cosb) / this.cosa * Game.DT;
         // �@�̂̊p�x����͈͂Ɋۂ߂Ă���
         for (var q = 0; q < 3 && this.rotation.x >= Math.PI / 2; q++) {
             this.rotation.x = Math.PI - this.rotation.x;
@@ -1202,9 +1388,9 @@ var Plane = (function (_super) {
         }
         // �@�̂̈ʒu��ϕ����ċ��߂�
         // this.velocity.addCons(this.gVel, Jflight.DT);
-        this.velocity.addScaledVector(this.gVel, Jflight.DT);
+        this.velocity.addScaledVector(this.gVel, Game.DT);
         // this.position.addCons(this.velocity, Jflight.DT);
-        this.position.addScaledVector(this.velocity, Jflight.DT);
+        this.position.addScaledVector(this.velocity, Game.DT);
         // �O�̂��߁A�n�ʂɂ߂荞�񂾂��ǂ����`�F�b�N
         if (this.height < 2) {
             this.position.z = this.gHeight + 2;
@@ -1215,8 +1401,9 @@ var Plane = (function (_super) {
         if (this.height < 5 && (Math.abs(this.velocity.z) > 50 || Math.abs(this.rotation.y) > 20 * Math.PI / 180 || this.rotation.x > 10 * Math.PI / 180)) {
             this.posInit();
         }
-        //
-        this.line.setRotationFromMatrix(this.matrix);
+        this.mesh.position.copy(this.position);
+        this.mesh.setRotationFromMatrix(CameraHelper.worldToView(this.matrix));
+        this.flightRecorder.push(this.position, this.matrix);
     };
     // �������c
     Plane.prototype.autoFlight = function (world) {
@@ -1348,7 +1535,7 @@ var Plane = (function (_super) {
         this.gcVel.y = this.position.y + ni.y + (oi.y - this.gVel.y * this.gunTime) * this.gunTime;
         this.gcVel.z = this.position.z + ni.z + (oi.z + (-9.8 - this.gVel.z) * this.gunTime / 2) * this.gunTime;
         // world.change3d(this, this.gcVel, sc);
-        var camera = Main.camera.clone();
+        var camera = Main.camera.getCamera().clone();
         camera.setRotationFromMatrix(CameraHelper.worldToView(this.matrix));
         camera.position.copy(this.position);
         camera.updateProjectionMatrix();
@@ -1543,6 +1730,8 @@ Plane.BMAX = 20; // �e�ۂ̍ő吔
 Plane.MMMAX = 4; // �~�T�C���̍ő吔
 Plane.WMAX = 6; // ���̐�
 Plane.MAXT = 50; // �@�e�̍ő剷�x
+///<reference path="./common/FSM/StateMachine.ts" />
+///<reference path="./common/FSM/State.ts" />
 ///<reference path="Plane.ts" />
 //
 // Jflight�N���X
@@ -1564,22 +1753,21 @@ Plane.MAXT = 50; // �@�e�̍ő剷�x
 //     | /
 //     |/
 //     -------->X
-var Jflight = (function () {
-    // �A�v���b�g�̍\�z
-    function Jflight(scene, hudCanvas) {
+var Game = (function () {
+    function Game(scene, canvas) {
         // super();
+        //set up the state machine
         // �ϐ�
         this.plane = []; // �e�@�̃I�u�W�F�N�g�ւ̔z��
         this.autoFlight = true; // ���@�iplane[0]�j��������c�ɂ���̂�
         this.isMouseMove = false;
-        // �@�̌`��̏�����
-        this.objInit();
+        this.stateMachine = new StateMachine(this);
         // �s�v�ȃK�[�x�b�W�R���N�V���������邽�߂ɁA
         // �I�u�W�F�N�g����߂ɏo���邾������Ă���
-        for (var i = 0; i < Jflight.PMAX; i++) {
+        for (var i = 0; i < Game.PMAX; i++) {
             this.plane.push(new Plane(scene));
         }
-        this.hud = new HUD(hudCanvas, this.plane[0], this);
+        this.screen = new TitleScene(canvas); //new HUD(hudCanvas, this.plane[0], this);
         // �e�@�̂̐ݒ�
         this.plane[0].no = 0;
         this.plane[1].no = 1;
@@ -1598,86 +1786,15 @@ var Jflight = (function () {
         this.plane[2].level = 20;
         this.plane[3].level = 30;
     }
-    // �@�̌`��̏�����
-    Jflight.prototype.objInit = function () {
-        if (Jflight.obj.length !== 0) {
-            return;
-        }
-        for (var j = 0; j < 20; j++) {
-            Jflight.obj.push([]);
-            for (var i = 0; i < 3; i++) {
-                Jflight.obj[j].push(new THREE.Vector3());
-            }
-        }
-        // �S�ēƗ��O�p�`�ō\��
-        // �{���͊e���_����L�������������������ł͕\�������ȗ���
-        Jflight.obj[0][0].set(-0.000000, -2.000000, 0.000000);
-        Jflight.obj[0][1].set(0.000000, 4.000000, 0.000000);
-        Jflight.obj[0][2].set(6.000000, -2.000000, 0.000000);
-        Jflight.obj[1][0].set(0.000000, -3.000000, 1.500000);
-        Jflight.obj[1][1].set(2.000000, -3.000000, 0.000000);
-        Jflight.obj[1][2].set(0.000000, 8.000000, 0.000000);
-        Jflight.obj[2][0].set(2.000000, 0.000000, 0.000000);
-        Jflight.obj[2][1].set(3.000000, 0.000000, -0.500000);
-        Jflight.obj[2][2].set(3.500000, 0.000000, 0.000000);
-        Jflight.obj[3][0].set(3.000000, 0.000000, 0.000000);
-        Jflight.obj[3][1].set(3.000000, -1.000000, -1.500000);
-        Jflight.obj[3][2].set(3.000000, 0.000000, -2.000000);
-        Jflight.obj[4][0].set(3.000000, -1.000000, -2.000000);
-        Jflight.obj[4][1].set(3.000000, 2.000000, -2.000000);
-        Jflight.obj[4][2].set(3.500000, 1.000000, -2.500000);
-        Jflight.obj[5][0].set(1.000000, 0.000000, -6.000000);
-        Jflight.obj[5][1].set(2.000000, 4.000000, -6.000000);
-        Jflight.obj[5][2].set(2.000000, -2.000000, 0.000000);
-        Jflight.obj[6][0].set(3.000000, 0.000000, -6.000000);
-        Jflight.obj[6][1].set(2.000000, 4.000000, -6.000000);
-        Jflight.obj[6][2].set(2.000000, -2.000000, 0.000000);
-        Jflight.obj[7][0].set(2.000000, 1.000000, 0.000000);
-        Jflight.obj[7][1].set(2.000000, -3.000000, 4.000000);
-        Jflight.obj[7][2].set(2.000000, -3.000000, -2.000000);
-        Jflight.obj[8][0].set(1.000000, 0.000000, 0.000000);
-        Jflight.obj[8][1].set(0.000000, 0.000000, -1.000000);
-        Jflight.obj[8][2].set(0.000000, 1.000000, 0.000000);
-        Jflight.obj[9][0].set(0.000000, -2.000000, 0.000000);
-        Jflight.obj[9][1].set(0.000000, 4.000000, 0.000000);
-        Jflight.obj[9][2].set(-6.000000, -2.000000, 0.000000);
-        Jflight.obj[10][0].set(0.000000, -3.000000, 1.500000);
-        Jflight.obj[10][1].set(-2.000000, -3.000000, 0.000000);
-        Jflight.obj[10][2].set(0.000000, 8.000000, 0.000000);
-        Jflight.obj[11][0].set(-2.000000, 0.000000, 0.000000);
-        Jflight.obj[11][1].set(-3.000000, 0.000000, -0.500000);
-        Jflight.obj[11][2].set(-3.500000, 0.000000, 0.000000);
-        Jflight.obj[12][0].set(-3.000000, 0.000000, 0.000000);
-        Jflight.obj[12][1].set(-3.000000, -1.000000, -1.500000);
-        Jflight.obj[12][2].set(-3.000000, 0.000000, -2.000000);
-        Jflight.obj[13][0].set(-3.000000, -1.000000, -2.000000);
-        Jflight.obj[13][1].set(-3.000000, 2.000000, -2.000000);
-        Jflight.obj[13][2].set(-3.500000, 1.000000, -2.500000);
-        Jflight.obj[14][0].set(-1.000000, 0.000000, -6.000000);
-        Jflight.obj[14][1].set(-2.000000, 4.000000, -6.000000);
-        Jflight.obj[14][2].set(-2.000000, -2.000000, 0.000000);
-        Jflight.obj[15][0].set(-3.000000, 0.000000, -6.000000);
-        Jflight.obj[15][1].set(-2.000000, 4.000000, -6.000000);
-        Jflight.obj[15][2].set(-2.000000, -2.000000, 0.000000);
-        Jflight.obj[16][0].set(-2.000000, 1.000000, 0.000000);
-        Jflight.obj[16][1].set(-2.000000, -3.000000, 4.000000);
-        Jflight.obj[16][2].set(-2.000000, -3.000000, -2.000000);
-        Jflight.obj[17][0].set(-1.000000, 0.000000, 0.000000);
-        Jflight.obj[17][1].set(0.000000, 0.000000, -1.000000);
-        Jflight.obj[17][2].set(0.000000, 1.000000, 0.000000);
-        Jflight.obj[18][0].set(3.000000, 0.000000, -2.000000);
-        Jflight.obj[18][1].set(3.000000, 0.000000, -1.500000);
-        Jflight.obj[18][2].set(3.000000, 7.000000, -2.000000);
-    };
     // ��ʕ\��
-    Jflight.prototype.draw = function (_context) {
+    Game.prototype.draw = function () {
         // ���@�̕ϊ��s���O�̂��ߍČv�Z���Ă���
         this.plane[0].checkTrans();
         // HUD�\��
-        this.hud.render();
+        this.screen.render();
     };
     // ���C�����[�v
-    Jflight.prototype.run = function () {
+    Game.prototype.run = function () {
         var keyboard = Main.keyboard;
         // �X�y�[�X�L�[�������ꂽ�玩�����cOFF
         if (keyboard.pressed("space")) {
@@ -1685,18 +1802,18 @@ var Jflight = (function () {
         }
         // �e�@��ړ�
         this.plane[0].move(this, this.autoFlight);
-        for (var i = 1; i < Jflight.PMAX; i++) {
+        for (var i = 1; i < Game.PMAX; i++) {
             this.plane[i].move(this, true);
         }
     };
-    Jflight.prototype.render = function (context) {
+    Game.prototype.render = function () {
         // �J�����ʒu����@�ɃZ�b�g���ĕ\��
         // this.camerapos.set(this.plane[0].position.x, this.plane[0].position.y, this.plane[0].position.z);
-        this.draw(context);
+        this.draw();
     };
     // �e�@�̂�\��
     // �e�ۂ�~�T�C��������ŕ\�����Ă���
-    Jflight.prototype.writePlane = function (_context) {
+    Game.prototype.writePlane = function (_context) {
         //let s0 = new THREE.Vector3();
         //let s1 = new THREE.Vector3();
         //let s2 = new THREE.Vector3();
@@ -1739,7 +1856,7 @@ var Jflight = (function () {
         //}
     };
     // �@�e��\��
-    Jflight.prototype.writeGun = function (_context, _aplane) {
+    Game.prototype.writeGun = function (_context, _aplane) {
         //let dm = new THREE.Vector3();
         //let dm2 = new THREE.Vector3();
         //let cp = new THREE.Vector3();
@@ -1778,7 +1895,7 @@ var Jflight = (function () {
         //}
     };
     // �~�T�C���Ƃ��̉���\��
-    Jflight.prototype.writeAam = function (_context, _aplane) {
+    Game.prototype.writeAam = function (_context, _aplane) {
         //let dm = new THREE.Vector3();
         //let cp = new THREE.Vector3();
         //for (let j = 0; j < Plane.MMMAX; j++) {
@@ -1813,7 +1930,7 @@ var Jflight = (function () {
         //}
     };
     // �n�ʂ�\��
-    Jflight.prototype.writeGround = function (_context) {
+    Game.prototype.writeGround = function (_context) {
         //let mx, my;
         //let i: number, j: number;
         //let p = new THREE.Vector3();
@@ -1850,30 +1967,29 @@ var Jflight = (function () {
         //}
     };
     // �n�ʂ̍�����v�Z
-    Jflight.prototype.gHeight = function (_px, _py) {
+    Game.prototype.gHeight = function (_px, _py) {
         return 0;
     };
     // �n�ʂ̌X����v�Z
-    Jflight.prototype.gGrad = function (_px, _py, p) {
+    Game.prototype.gGrad = function (_px, _py, p) {
         p.x = 0;
         p.y = 0;
     };
-    return Jflight;
+    return Game;
 }());
 // �萔�錾
-Jflight.PMAX = 4; // �@�̂̍ő吔
-Jflight.G = -9.8; // �d�͉����x
-Jflight.DT = 0.05; // �v�Z�X�e�b�v��
-Jflight.obj = []; // �@�̂̌`��i�O�p�`�̏W���j
-var Scene = (function () {
-    function Scene(canvas) {
+Game.PMAX = 4; // �@�̂̍ő吔
+Game.G = -9.8; // �d�͉����x
+Game.DT = 0.05; // �v�Z�X�e�b�v��
+var _Screen = (function () {
+    function _Screen(canvas) {
         this.canvas = canvas;
         var context = canvas.getContext("2d");
         if (context) {
             this.context = context;
         }
     }
-    Scene.prototype.drawLine = function (strokeStyle, x1, y1, x2, y2) {
+    _Screen.prototype.drawLine = function (strokeStyle, x1, y1, x2, y2) {
         var ctx = this.context;
         ctx.save();
         {
@@ -1894,7 +2010,7 @@ var Scene = (function () {
         }
         ctx.restore();
     };
-    Scene.prototype.drawCircle = function (strokeStyle, centerX, centerY, radius) {
+    _Screen.prototype.drawCircle = function (strokeStyle, centerX, centerY, radius) {
         var ctx = this.context;
         ctx.save();
         {
@@ -1908,7 +2024,7 @@ var Scene = (function () {
         }
         ctx.restore();
     };
-    Scene.prototype.fillText = function (text, font, x, y) {
+    _Screen.prototype.fillText = function (text, font, x, y) {
         var context = this.context;
         context.save();
         {
@@ -1918,7 +2034,7 @@ var Scene = (function () {
         }
         context.restore();
     };
-    Scene.prototype.strokeRect = function (strokeStyle, x, y, w, h) {
+    _Screen.prototype.strokeRect = function (strokeStyle, x, y, w, h) {
         var ctx = this.context;
         ctx.save();
         {
@@ -1927,7 +2043,7 @@ var Scene = (function () {
         }
         ctx.restore();
     };
-    Scene.prototype.drawRoundRect = function (style, x, y, width, height, radius, stroke) {
+    _Screen.prototype.drawRoundRect = function (style, x, y, width, height, radius, stroke) {
         if (radius === void 0) { radius = 5; }
         if (stroke === void 0) { stroke = false; }
         var ctx = this.context;
@@ -1975,11 +2091,9 @@ var Scene = (function () {
         }
         ctx.restore();
     };
-    Scene.prototype.render = function () {
-    };
-    return Scene;
+    return _Screen;
 }());
-///<reference path="./Scene.ts" />
+///<reference path="./Screen.ts" />
 var TitleScene = (function (_super) {
     __extends(TitleScene, _super);
     function TitleScene(canvas) {
@@ -2024,16 +2138,15 @@ var TitleScene = (function (_super) {
         this.drawTitle("Wing War", "bold 128px 'Racing Sans One'", centerX, centerY - height / 4);
     };
     return TitleScene;
-}(Scene));
-///<reference path="./Scene/Scene.ts" />
-///<reference path="./Scene/TitleScene.ts" />
+}(_Screen));
+///<reference path="./Screen.ts" />
+///<reference path="./TitleScreen.ts" />
 var HUD = (function (_super) {
     __extends(HUD, _super);
     function HUD(canvas, plane, world) {
         var _this = _super.call(this, canvas) || this;
         _this.plane = plane;
         _this.world = world;
-        _this.currentScene = new TitleScene(canvas);
         return _this;
     }
     HUD.prototype.drawCross = function (x, y, length) {
@@ -2050,7 +2163,7 @@ var HUD = (function (_super) {
         var radius = height / 2 * 0.8;
         this.drawCircle("rgb(255, 255, 255)", centerX, centerY, height / 2 * 0.8);
         this.drawCircle("rgb(255, 255, 255)", centerX + this.plane.stickPos.y * radius, centerY - this.plane.stickPos.x * radius, 10);
-        this.drawCircle("rgb(255, 255, 255)", centerX + Jflight.mouseX, centerY + Jflight.mouseY, 10);
+        this.drawCircle("rgb(255, 255, 255)", centerX + Game.mouseX, centerY + Game.mouseY, 10);
         var y = this.plane.rotation.y;
         context.save();
         {
@@ -2070,12 +2183,12 @@ var HUD = (function (_super) {
         context.restore();
         this.fillText("Speed=" + this.plane.velocity.length(), "18px 'ＭＳ Ｐゴシック'", 50, 50);
         var t = this.world.plane[this.plane.target].position.clone();
-        var u = CameraHelper.toScreenPosition(t, Main.camera);
+        var u = CameraHelper.toScreenPosition(t, Main.camera.getCamera());
         this.strokeRect("rgb(0, 255, 0)", u.x - 10, u.y - 10, 20, 20);
         //this.currentScene.render();
     };
     return HUD;
-}(Scene));
+}(_Screen));
 /**
  * @author zz85 / https://github.com/zz85
  *
@@ -2214,18 +2327,20 @@ var Ground = (function () {
         //    scene.add(mesh);
         //});
         var geometry = new THREE.PlaneGeometry(10000, 10000);
-        var material = new THREE.MeshBasicMaterial({ color: 0x008000, side: THREE.DoubleSide });
+        var material = new THREE.MeshPhongMaterial({ color: 0x008000, side: THREE.DoubleSide });
         var plane = new THREE.Mesh(geometry, material);
+        plane.receiveShadow = true;
         plane.position.set(0, 0, 0.1);
         scene.add(plane);
     }
     return Ground;
 }());
-///<reference path="./Helpers/CameraHelper.ts" />
+///<reference path="./Camera.ts" />
 ///<reference path="THREEx.KeyboardState.ts" />
+///<reference path="MouseState.ts" />
 ///<reference path="THREEx.WindowResize.ts" />
-///<reference path="Jflight.ts" />
-///<reference path="HUD.ts" />
+///<reference path="Game.ts" />
+///<reference path="./Screen/HUD.ts" />
 ///<reference path="./Sky/SkyShader.ts" />
 ///<reference path="./Sky/Cloud.ts" />
 ///<reference path="./Terrain/Sea.ts" />
@@ -2236,12 +2351,9 @@ var Main;
     var flight;
     /* canvas要素のノードオブジェクト */
     var canvas;
-    var context; // = canvas.getContext("2d");
     // standard global variables
     var container;
     var scene;
-    var mouseX;
-    var mouseY;
     // var stats: Stats;
     var clock = new THREE.Clock();
     // custom global variables
@@ -2256,6 +2368,7 @@ var Main;
     var directionalLight;
     var sea;
     Main.keyboard = new THREEx.KeyboardState();
+    var mouse;
     function createLights() {
         // ambientLight = new THREE.AmbientLight(0xffffff);
         /// scene.add(ambientLight);
@@ -2264,49 +2377,49 @@ var Main;
         //シーンオブジェクトに追加            
         scene.add(hemiLight);
         directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
-        // directionalLight.position.set(8000, -5000, 12000);
+        directionalLight.position.set(0, 0, 1000);
+        directionalLight.target.position.set(0, 0, 0);
+        directionalLight.castShadow = true;
+        directionalLight.shadowMapHeight = Math.pow(2, 12);
+        directionalLight.shadowMapWidth = Math.pow(2, 12);
+        directionalLight.shadowCameraNear = 1;
+        directionalLight.shadowCameraFar = 4000;
+        directionalLight.shadowCameraLeft = -4000;
+        directionalLight.shadowCameraRight = 4000;
+        directionalLight.shadowCameraTop = 4000;
+        directionalLight.shadowCameraBottom = -4000;
+        var helper = new THREE.DirectionalLightHelper(directionalLight, 5);
+        var cameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
+        scene.add(helper);
+        scene.add(cameraHelper);
         scene.add(directionalLight);
-        //light = new THREE.HemisphereLight(0xffffff, 0xb3858c, 0.65);
-        //light.position.set(0, 0, 10000);
-        //shadowLight = new THREE.DirectionalLight(0xffe79d, .7);
-        //shadowLight.position.set(8000, -5000, 12000);
-        //shadowLight.castShadow = true;
-        //shadowLight.shadowMapWidth = 2048;
-        //shadowLight.shadowMapHeight = 2048;
-        //backLight = new THREE.DirectionalLight(0xffffff, .4);
-        //backLight.position.set(20000, -10000, 10000);
-        //scene.add(backLight);
-        //scene.add(light);
-        //scene.add(shadowLight);
     }
     // functions
     function init() {
         canvas = document.getElementById("hud");
-        canvas.onmousemove = onMouseMove;
-        var _context = canvas.getContext("2d");
-        if (_context) {
-            context = _context;
-        }
+        mouse = new MouseState(canvas);
         // scene
         scene = new THREE.Scene();
         // camera
-        var SCREEN_WIDTH = window.innerWidth;
-        var SCREEN_HEIGHT = window.innerHeight;
-        var VIEW_ANGLE = 90;
-        var ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT;
-        var NEAR = 0.1;
-        var FAR = 2000000;
-        Main.camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
-        scene.add(Main.camera);
-        Main.camera.position.z = SCREEN_HEIGHT / 2;
-        Main.camera.lookAt(scene.position);
+        //const SCREEN_WIDTH = window.innerWidth;
+        //const SCREEN_HEIGHT = window.innerHeight;
+        //const VIEW_ANGLE: number = 90;
+        //const ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT;
+        //const NEAR = 0.1;
+        //const FAR = 2000000;
+        //camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+        //scene.add(camera);
+        //camera.position.z = SCREEN_HEIGHT / 2;
+        //camera.lookAt(scene.position);
+        Main.camera = new Camera(scene);
         // RENDERER
         Main.renderer = new THREE.WebGLRenderer({ antialias: true });
-        Main.renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+        Main.renderer.setSize(window.innerWidth, window.innerHeight);
+        Main.renderer.shadowMapEnabled = true;
         container = document.getElementById("view3d");
         container.appendChild(Main.renderer.domElement);
         // EVENTS
-        THREEx.WindowResize(Main.renderer, Main.camera);
+        THREEx.WindowResize(Main.renderer, Main.camera.getCamera());
         // THREEx.FullScreen.bindKey({ charCode: 'm'.charCodeAt(0) });
         // CONTROLS
         // controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -2316,21 +2429,6 @@ var Main;
         // stats.dom.style.bottom = '0px';
         // stats.dom.style.zIndex = '100';
         // container.appendChild(stats.dom);
-        // LIGHT
-        // var light = new THREE.PointLight(0xffffff);
-        // light.position.set(0, 250, 0);
-        // scene.add(light);
-        // var directionalLight = new THREE.DirectionalLight(0xffffff);
-        // directionalLight.position.set(0, 0.7, 0.7);
-        // scene.add(directionalLight);
-        // FLOOR
-        // let pitch = new _SoccerPitch(scene);
-        // SKYBOX/FOG
-        // var skyBoxGeometry = new THREE.CubeGeometry(10000, 10000, 10000);
-        // var skyBoxMaterial = new THREE.MeshBasicMaterial({ color: 0x9999ff, side: THREE.BackSide });
-        // var skyBox = new THREE.Mesh(skyBoxGeometry, skyBoxMaterial);
-        // scene.add(skyBox);
-        // scene.fog = new THREE.FogExp2(0x9999ff, 0.00025);
         ////////////
         // CUSTOM //
         ////////////
@@ -2384,12 +2482,16 @@ var Main;
             sunSphere.position.x = distance * Math.cos(phi);
             sunSphere.position.z = distance * Math.sin(phi) * Math.sin(theta);
             sunSphere.position.y = -distance * Math.sin(phi) * Math.cos(theta);
-            directionalLight.position.copy(sunSphere.position);
+            // directionalLight.position.copy(sunSphere.position);
             sunSphere.visible = effectController.sun;
             sky.uniforms.sunPosition.value.copy(sunSphere.position);
-            Main.renderer.render(scene, Main.camera);
+            Main.renderer.render(scene, Main.camera.getCamera());
         }
-        var gui = new dat.GUI();
+        var gui = new dat.GUI({ autoPlace: false });
+        var customContainer = document.getElementById('gui-container');
+        if (customContainer) {
+            customContainer.appendChild(gui.domElement);
+        }
         var skyFolder = gui.addFolder('Sky');
         skyFolder.add(effectController, "turbidity", 1.0, 20.0 /*, 0.1*/).onChange(guiChanged);
         skyFolder.add(effectController, "rayleigh", 0.0, 4 /*, 0.001*/).onChange(guiChanged);
@@ -2403,29 +2505,10 @@ var Main;
         // var explosionTexture = new THREE.TextureLoader().load('images/explosion.jpg');
         // boomer = new TextureAnimator(explosionTexture, 4, 4, 16, 55); // texture, #horiz, #vert, #total, duration.
         // var explosionMaterial = new THREE.MeshBasicMaterial({ map: explosionTexture });
-        flight = new Jflight(scene, canvas);
+        flight = new Game(scene, canvas);
+        Main.camera.setTarget(flight.plane[0]);
     }
     Main.init = init;
-    function onMouseMove(ev) {
-        var rect = canvas.getBoundingClientRect(); //ev.target.getBoundingClientRect();
-        mouseX = ev.clientX - rect.left;
-        mouseY = ev.clientY - rect.top;
-        var centerX = canvas.width / 2;
-        var centerY = canvas.height / 2;
-        Jflight.mouseX = mouseX - centerX;
-        Jflight.mouseY = mouseY - centerY;
-        var radius = centerY * 0.8;
-        if (Math.sqrt(Math.pow(Jflight.mouseX, 2) + Math.pow(Jflight.mouseY, 2)) > radius) {
-            var l = Math.sqrt(Math.pow(Jflight.mouseX, 2) + Math.pow(Jflight.mouseY, 2));
-            Jflight.mouseX /= l; // mouseX - centerX;
-            Jflight.mouseY /= l; // mouseY - centerY;
-            Jflight.mouseX *= radius;
-            Jflight.mouseY *= radius;
-        }
-        Jflight.mouseX /= radius;
-        Jflight.mouseY /= radius;
-        flight.isMouseMove = true;
-    }
     function animate() {
         requestAnimationFrame(animate);
         // 
@@ -2436,51 +2519,18 @@ var Main;
     function update() {
         var delta = clock.getDelta();
         delta = 0;
-        // Jflight.DT = delta;
-        /* 2Dコンテキスト */
-        //let context = canvas.getContext("2d");
         flight.run();
-        // boomer.update(1000 * delta);
-        // man.update(1000 * delta);
-        // if (keyboard.pressed("z")) {
-        // do something
-        // }
-        // controls.update();
-        // stats.update();
-        // man.quaternion(camera.quaternion);
-        Main.camera.setRotationFromMatrix(CameraHelper.worldToView(flight.plane[0].matrix));
-        Main.camera.position.copy(flight.plane[0].position);
-        flight.plane[1].line.position.set(flight.plane[1].position.x, flight.plane[1].position.y, flight.plane[1].position.z);
-        flight.plane[2].line.position.set(flight.plane[2].position.x, flight.plane[2].position.y, flight.plane[2].position.z);
-        flight.plane[3].line.position.set(flight.plane[3].position.x, flight.plane[3].position.y, flight.plane[3].position.z);
+        Main.camera.update();
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        //flight.setWidth(window.innerWidth);
-        //flight.setHeight(window.innerHeight);
     }
     function render() {
-        Main.renderer.render(scene, Main.camera);
-        flight.render(context);
+        Main.renderer.render(scene, Main.camera.getCamera());
+        flight.render();
     }
 })(Main || (Main = {}));
 Main.init();
 Main.animate();
-// camera
-var SCREEN_WIDTH = window.innerWidth;
-var SCREEN_HEIGHT = window.innerHeight;
-var VIEW_ANGLE = 90;
-var ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT;
-var NEAR = 0.1;
-var FAR = 2000000;
-var Camera = (function () {
-    function Camera() {
-        //camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
-        //scene.add(camera);
-        //camera.position.z = SCREEN_HEIGHT / 2;
-        //camera.lookAt(scene.position);
-    }
-    return Camera;
-}());
 var Vector3Helper;
 (function (Vector3Helper) {
     var result = new THREE.Vector3();

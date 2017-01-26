@@ -1,4 +1,4 @@
-﻿class Scene {
+﻿abstract class _Screen {
     protected context: CanvasRenderingContext2D;
     public constructor(protected canvas: HTMLCanvasElement) {
         let context = canvas.getContext("2d");
@@ -101,6 +101,5 @@
             }
         } ctx.restore();
     }
-    public render() {
-    }
+    abstract render(): void;
 }

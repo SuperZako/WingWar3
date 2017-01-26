@@ -15,8 +15,9 @@ class Ground {
         //});
 
         var geometry = new THREE.PlaneGeometry(10000, 10000);
-        var material = new THREE.MeshBasicMaterial({ color: 0x008000, side: THREE.DoubleSide });
+        var material = new THREE.MeshPhongMaterial ({ color: 0x008000, side: THREE.DoubleSide});
         var plane = new THREE.Mesh(geometry, material);
+        plane.receiveShadow  = true;
         plane.position.set(0, 0, 0.1);
         scene.add(plane);
     }

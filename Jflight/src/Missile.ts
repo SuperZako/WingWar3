@@ -57,7 +57,7 @@ class Missile extends PhysicsState {
 
     // ミサイルのホーミング処理
 
-    public horming(world: Jflight, _plane: Plane) {
+    public horming(world: Game, _plane: Plane) {
 
         // ロックONされていて、残りステップが85以下ならホーミングする
 
@@ -131,7 +131,7 @@ class Missile extends PhysicsState {
 
     // ミサイルモーター計算
 
-    public calcMotor(_world: Jflight, _plane: Plane) {
+    public calcMotor(_world: Game, _plane: Plane) {
 
         // 発射直後はモーターOFF
         if (this.use < 100 - 5) {
@@ -153,7 +153,7 @@ class Missile extends PhysicsState {
     // ミサイル移動、敵機とのあたり判定、地面との当たり判定を行う
     // ミサイル発射処理はJflightクラス側で行われている
 
-    public move(world: Jflight, plane: Plane) {
+    public move(world: Game, plane: Plane) {
 
         // 爆発中ならカウンタ減少
         if (this.bom > 0) {
@@ -170,7 +170,7 @@ class Missile extends PhysicsState {
         }
 
         // 重力加速
-        this.velocity.z += Jflight.G * Jflight.DT;
+        this.velocity.z += Game.G * Game.DT;
 
         // ホーミング計算
         this.horming(world, plane);
@@ -184,7 +184,7 @@ class Missile extends PhysicsState {
 
         // ミサイル移動
         // this.position.addCons(this.velocity, Jflight.DT);
-        this.position.addScaledVector(this.velocity, Jflight.DT);
+        this.position.addScaledVector(this.velocity, Game.DT);
         this.use--;
 
         // ターゲットとの当たり判定

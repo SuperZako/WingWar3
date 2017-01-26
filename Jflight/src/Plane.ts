@@ -2,6 +2,7 @@
 ///<reference path="Wing.ts" />
 ///<reference path="Bullet.ts" />
 ///<reference path="Missile.ts" />
+///<reference path="FlightRecorder.ts" />
 
 //
 // Plane
@@ -92,8 +93,9 @@ class Plane extends PhysicsState {
     public aam: Missile[] = [];         // 各ミサイルオブジェクト
     public aamTarget: number[];         // 各ミサイルのロック目標
 
-    line: THREE.Line;
+    private flightRecorder = new FlightRecorder();
 
+    private mesh: THREE.Mesh;
     // コンストラクタ
     public constructor(scene: THREE.Scene) {
         super();
@@ -114,19 +116,20 @@ class Plane extends PhysicsState {
         this.posInit();
 
 
-        var material = new THREE.LineBasicMaterial({ color: 0xffffff });
+        //オブジェクト
+        let loader = new THREE.JSONLoader();
+        loader.load('../models/a6m5.json', (geometry, materials) => { //第１引数はジオメトリー、第２引数はマテリアルが自動的に取得）
+            var faceMaterial = new THREE.MeshFaceMaterial(materials);
+            this.mesh = new THREE.Mesh(geometry, faceMaterial);
+            this.mesh.castShadow = true;
+            scene.add(this.mesh);
 
-        var geometry = new THREE.Geometry();
+            //  this.shadowMesh = new THREE.ShadowMesh(cube);
+        });
+    }
 
-        for (let vertices of Jflight.obj) {
-            geometry.vertices.push(vertices[0].clone());
-            geometry.vertices.push(vertices[1].clone());
-            geometry.vertices.push(vertices[2].clone());
-        }
-
-        this.line = new THREE.Line(geometry, material);
-
-        scene.add(this.line);
+    public getFlightRecorder() {
+        return this.flightRecorder;
     }
 
     // 各変数を初期化する
@@ -290,7 +293,7 @@ class Plane extends PhysicsState {
 
 
     // 機銃やミサイルのロック処理
-    public lockCheck(world: Jflight) {
+    public lockCheck(world: Game) {
         let a = new THREE.Vector3();
         let b = new THREE.Vector3();
         let nno = new Array<number>(Plane.MMMAX);       // 機体No.
@@ -301,7 +304,7 @@ class Plane extends PhysicsState {
             nno[m] = -1;
         }
 
-        for (let m = 0; m < Jflight.PMAX; m++) {
+        for (let m = 0; m < Game.PMAX; m++) {
 
             // 目標が存在していればロックリストに追加
             if (m !== this.no && world.plane[m].use) {
@@ -365,7 +368,7 @@ class Plane extends PhysicsState {
     // 機体を動かす
     // 自機の弾丸なども移動
 
-    public move(world: Jflight, autof: boolean) {
+    public move(world: Game, autof: boolean) {
 
         this.checkTrans();           // 座標変換用の行列再計算
         this.lockCheck(world);       // ミサイルロック処理
@@ -384,7 +387,7 @@ class Plane extends PhysicsState {
     // キー状態をもとに、スティックやトリガーをセット
     // 実際のキースキャンを処理しているのは、Applet3Dクラス
 
-    protected keyScan(_world: Jflight) {
+    protected keyScan(_world: Game) {
         this.stickVel.set(0, 0, 0);
         this.boost = false;
         let keyboard = Main.keyboard;
@@ -440,7 +443,7 @@ class Plane extends PhysicsState {
     }
 
     // 機体計算
-    public moveCalc(world: Jflight) {
+    public moveCalc(world: Game) {
         let ve;
         let dm = new THREE.Vector3();
 
@@ -452,7 +455,7 @@ class Plane extends PhysicsState {
 
             // 主目標の座標をスクリーン座標に変換
             // world.change3d(this, world.plane[this.gunTarget].position, dm);
-            let camera = Main.camera.clone();
+            let camera = Main.camera.getCamera().clone();
             camera.setRotationFromMatrix(CameraHelper.worldToView(this.matrix));
             camera.position.copy(this.position);
             let p = CameraHelper.toScreenPosition(world.plane[this.gunTarget].position, camera);
@@ -529,7 +532,7 @@ class Plane extends PhysicsState {
 
             v.copy(wing.fVel);
             v.applyMatrix4(this.invMatrix);
-            v.z += wing.mass * Jflight.G;
+            v.z += wing.mass * Game.G;
             af.add(v);
 
 
@@ -548,9 +551,9 @@ class Plane extends PhysicsState {
 
         // 角度変化を積分
 
-        this.vaVel.x += am.x / this.iMass.x * Jflight.DT;
-        this.vaVel.y += am.y / this.iMass.y * Jflight.DT;
-        this.vaVel.z += am.z / this.iMass.z * Jflight.DT;
+        this.vaVel.x += am.x / this.iMass.x * Game.DT;
+        this.vaVel.y += am.y / this.iMass.y * Game.DT;
+        this.vaVel.z += am.z / this.iMass.z * Game.DT;
 
 
         //let rotX = (this.vaVel.x * this.cosb + this.vaVel.z * this.sinb) * Jflight.DT;
@@ -558,9 +561,9 @@ class Plane extends PhysicsState {
         //let rotZ = (-this.vaVel.x * this.sinb + this.vaVel.z * this.cosb) / this.cosa * Jflight.DT;
 
 
-        this.rotation.x += (this.vaVel.x * this.cosb + this.vaVel.z * this.sinb) * Jflight.DT;
-        this.rotation.y += (this.vaVel.y + (this.vaVel.x * this.sinb - this.vaVel.z * this.cosb) * this.sina / this.cosa) * Jflight.DT;
-        this.rotation.z += (-this.vaVel.x * this.sinb + this.vaVel.z * this.cosb) / this.cosa * Jflight.DT;
+        this.rotation.x += (this.vaVel.x * this.cosb + this.vaVel.z * this.sinb) * Game.DT;
+        this.rotation.y += (this.vaVel.y + (this.vaVel.x * this.sinb - this.vaVel.z * this.cosb) * this.sina / this.cosa) * Game.DT;
+        this.rotation.z += (-this.vaVel.x * this.sinb + this.vaVel.z * this.cosb) / this.cosa * Game.DT;
 
         // 機体の角度を一定範囲に丸めておく
         for (let q = 0; q < 3 && this.rotation.x >= Math.PI / 2; q++) {
@@ -626,10 +629,10 @@ class Plane extends PhysicsState {
         // 機体の位置を積分して求める
 
         // this.velocity.addCons(this.gVel, Jflight.DT);
-        this.velocity.addScaledVector(this.gVel, Jflight.DT);
+        this.velocity.addScaledVector(this.gVel, Game.DT);
 
         // this.position.addCons(this.velocity, Jflight.DT);
-        this.position.addScaledVector(this.velocity, Jflight.DT);
+        this.position.addScaledVector(this.velocity, Game.DT);
 
         // 念のため、地面にめり込んだかどうかチェック
         if (this.height < 2) {
@@ -643,14 +646,15 @@ class Plane extends PhysicsState {
             this.posInit();
         }
 
+        this.mesh.position.copy(this.position);
+        this.mesh.setRotationFromMatrix(CameraHelper.worldToView(this.matrix));
 
-        //
-        this.line.setRotationFromMatrix(this.matrix);
+        this.flightRecorder.push(this.position, this.matrix);
     }
 
     // 自動操縦
 
-    public autoFlight(world: Jflight) {
+    public autoFlight(world: Game) {
         let m, mm;
 
         this.gunShoot = false;
@@ -774,7 +778,7 @@ class Plane extends PhysicsState {
 
     // 機銃の弾丸移動と発射処理
 
-    public moveBullet(world: Jflight) {
+    public moveBullet(world: Game) {
         // let aa;
 
         // let sc = new THREE.Vector3();
@@ -807,7 +811,7 @@ class Plane extends PhysicsState {
         this.gcVel.z = this.position.z + ni.z + (oi.z + (-9.8 - this.gVel.z) * this.gunTime / 2) * this.gunTime;
 
         // world.change3d(this, this.gcVel, sc);
-        let camera = Main.camera.clone();
+        let camera = Main.camera.getCamera().clone();
         camera.setRotationFromMatrix(CameraHelper.worldToView(this.matrix));
         camera.position.copy(this.position);
         camera.updateProjectionMatrix();
@@ -894,7 +898,7 @@ class Plane extends PhysicsState {
 
     // ミサイル移動と発射処理
 
-    public moveAam(world: Jflight) {
+    public moveAam(world: Game) {
         let dm = new THREE.Vector3();
         let ni = new THREE.Vector3();
         let oi = new THREE.Vector3();

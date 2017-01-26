@@ -1,8 +1,9 @@
-﻿///<reference path="./Helpers/CameraHelper.ts" />
+﻿///<reference path="./Camera.ts" />
 ///<reference path="THREEx.KeyboardState.ts" />
+///<reference path="MouseState.ts" />
 ///<reference path="THREEx.WindowResize.ts" />
-///<reference path="Jflight.ts" />
-///<reference path="HUD.ts" />
+///<reference path="Game.ts" />
+///<reference path="./Screen/HUD.ts" />
 
 ///<reference path="./Sky/SkyShader.ts" />
 ///<reference path="./Sky/Cloud.ts" />
@@ -18,23 +19,18 @@ declare interface Promise<T> {
 namespace Main {
     "use strict";
 
-    let flight: Jflight;
+    let flight: Game;
 
     /* canvas要素のノードオブジェクト */
 
     let canvas: HTMLCanvasElement;
-    let context: CanvasRenderingContext2D;// = canvas.getContext("2d");
-
 
     // standard global variables
     var container: HTMLDivElement;
     var scene: THREE.Scene;
-    export var camera: THREE.PerspectiveCamera;
+    export var camera: Camera;//THREE.PerspectiveCamera;
 
     export var renderer: THREE.WebGLRenderer;
-
-    var mouseX: number;
-    var mouseY: number;
 
     // var stats: Stats;
     var clock = new THREE.Clock();
@@ -53,7 +49,7 @@ namespace Main {
 
     let sea: Sea;
     export var keyboard = new THREEx.KeyboardState();
-
+    let mouse: MouseState;
     function createLights() {
         // ambientLight = new THREE.AmbientLight(0xffffff);
         /// scene.add(ambientLight);
@@ -66,59 +62,61 @@ namespace Main {
 
 
         directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
-        // directionalLight.position.set(8000, -5000, 12000);
+        directionalLight.position.set(0, 0, 1000);
+        directionalLight.target.position.set(0, 0, 0);
+        directionalLight.castShadow = true;
+
+        directionalLight.shadowMapHeight = 2 ** 12;
+        directionalLight.shadowMapWidth = 2 ** 12;
+        directionalLight.shadowCameraNear = 1;
+        directionalLight.shadowCameraFar = 4000;
+        directionalLight.shadowCameraLeft = -4000;
+        directionalLight.shadowCameraRight = 4000;
+        directionalLight.shadowCameraTop = 4000;
+        directionalLight.shadowCameraBottom = -4000;
+
+        var helper = new THREE.DirectionalLightHelper(directionalLight, 5);
+        var cameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
+        scene.add(helper);
+        scene.add(cameraHelper);
         scene.add(directionalLight);
-        //light = new THREE.HemisphereLight(0xffffff, 0xb3858c, 0.65);
-        //light.position.set(0, 0, 10000);
-
-        //shadowLight = new THREE.DirectionalLight(0xffe79d, .7);
-        //shadowLight.position.set(8000, -5000, 12000);
-        //shadowLight.castShadow = true;
-        //shadowLight.shadowMapWidth = 2048;
-        //shadowLight.shadowMapHeight = 2048;
-
-        //backLight = new THREE.DirectionalLight(0xffffff, .4);
-        //backLight.position.set(20000, -10000, 10000);
-
-        //scene.add(backLight);
-        //scene.add(light);
-        //scene.add(shadowLight);
     }
 
     // functions
     export function init(): void {
         canvas = <HTMLCanvasElement>document.getElementById("hud");
-        canvas.onmousemove = onMouseMove;
-        let _context = canvas.getContext("2d");
-        if (_context) {
-            context = _context;
-        }
+
+        mouse = new MouseState(canvas);
+
         // scene
         scene = new THREE.Scene();
 
         // camera
-        const SCREEN_WIDTH = window.innerWidth;
-        const SCREEN_HEIGHT = window.innerHeight;
-        const VIEW_ANGLE: number = 90;
-        const ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT;
-        const NEAR = 0.1;
-        const FAR = 2000000;
+        //const SCREEN_WIDTH = window.innerWidth;
+        //const SCREEN_HEIGHT = window.innerHeight;
+        //const VIEW_ANGLE: number = 90;
+        //const ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT;
+        //const NEAR = 0.1;
+        //const FAR = 2000000;
 
-        camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
-        scene.add(camera);
-        camera.position.z = SCREEN_HEIGHT / 2;
-        camera.lookAt(scene.position);
+        //camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+        //scene.add(camera);
+        //camera.position.z = SCREEN_HEIGHT / 2;
+        //camera.lookAt(scene.position);
+        camera = new Camera(scene);
 
         // RENDERER
         renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMapEnabled = true;
+
 
         container = <HTMLDivElement>document.getElementById("view3d");
 
         container.appendChild(renderer.domElement);
 
         // EVENTS
-        THREEx.WindowResize(renderer, camera);
+        THREEx.WindowResize(renderer, camera.getCamera());
         // THREEx.FullScreen.bindKey({ charCode: 'm'.charCodeAt(0) });
 
         // CONTROLS
@@ -131,39 +129,6 @@ namespace Main {
         // stats.dom.style.zIndex = '100';
 
         // container.appendChild(stats.dom);
-
-
-
-        // LIGHT
-
-        // var light = new THREE.PointLight(0xffffff);
-
-        // light.position.set(0, 250, 0);
-
-        // scene.add(light);
-
-
-
-        // var directionalLight = new THREE.DirectionalLight(0xffffff);
-
-        // directionalLight.position.set(0, 0.7, 0.7);
-
-        // scene.add(directionalLight);
-
-
-
-        // FLOOR
-        // let pitch = new _SoccerPitch(scene);
-
-
-
-        // SKYBOX/FOG
-        // var skyBoxGeometry = new THREE.CubeGeometry(10000, 10000, 10000);
-        // var skyBoxMaterial = new THREE.MeshBasicMaterial({ color: 0x9999ff, side: THREE.BackSide });
-        // var skyBox = new THREE.Mesh(skyBoxGeometry, skyBoxMaterial);
-
-        // scene.add(skyBox);
-        // scene.fog = new THREE.FogExp2(0x9999ff, 0.00025);
 
         ////////////
         // CUSTOM //
@@ -243,17 +208,23 @@ namespace Main {
             sunSphere.position./*y*/z = distance * Math.sin(phi) * Math.sin(theta);
             sunSphere.position./*z*/y = -distance * Math.sin(phi) * Math.cos(theta);
 
-            directionalLight.position.copy(sunSphere.position);
+            // directionalLight.position.copy(sunSphere.position);
 
             sunSphere.visible = effectController.sun;
 
             sky.uniforms.sunPosition.value.copy(sunSphere.position);
 
-            renderer.render(scene, camera);
+            renderer.render(scene, camera.getCamera());
 
         }
 
-        var gui = new dat.GUI();
+        var gui = new dat.GUI({ autoPlace: false });
+        let customContainer = document.getElementById('gui-container');
+
+        if (customContainer) {
+            customContainer.appendChild(gui.domElement);
+        }
+
         let skyFolder = gui.addFolder('Sky');
         skyFolder.add(effectController, "turbidity", 1.0, 20.0/*, 0.1*/).onChange(guiChanged);
         skyFolder.add(effectController, "rayleigh", 0.0, 4/*, 0.001*/).onChange(guiChanged);
@@ -265,88 +236,36 @@ namespace Main {
         skyFolder.add(effectController, "sun").onChange(guiChanged);
 
         guiChanged();
+
+
+
         // var explosionTexture = new THREE.TextureLoader().load('images/explosion.jpg');
 
         // boomer = new TextureAnimator(explosionTexture, 4, 4, 16, 55); // texture, #horiz, #vert, #total, duration.
 
         // var explosionMaterial = new THREE.MeshBasicMaterial({ map: explosionTexture });
 
-        flight = new Jflight(scene, canvas);
-
+        flight = new Game(scene, canvas);
+        camera.setTarget(flight.plane[0]);
     }
-
-    function onMouseMove(ev: MouseEvent) {
-        var rect = canvas.getBoundingClientRect();//ev.target.getBoundingClientRect();
-        mouseX = ev.clientX - rect.left;
-        mouseY = ev.clientY - rect.top;
-
-        let centerX = canvas.width / 2;
-        let centerY = canvas.height / 2;
-
-        Jflight.mouseX = mouseX - centerX;
-        Jflight.mouseY = mouseY - centerY;
-
-        let radius = centerY * 0.8;
-        if (Math.sqrt(Jflight.mouseX ** 2 + Jflight.mouseY ** 2) > radius) {
-            let l = Math.sqrt(Jflight.mouseX ** 2 + Jflight.mouseY ** 2);
-            Jflight.mouseX /= l; // mouseX - centerX;
-            Jflight.mouseY /= l; // mouseY - centerY;
-            Jflight.mouseX *= radius;
-            Jflight.mouseY *= radius;
-        }
-        Jflight.mouseX /= radius;
-        Jflight.mouseY /= radius;
-        flight.isMouseMove = true;
-    }
-
     export function animate() {
         requestAnimationFrame(animate);
-
         // 
         update();
         render();
     }
-
     function update() {
-
         var delta = clock.getDelta();
         delta = 0;
-        // Jflight.DT = delta;
-        /* 2Dコンテキスト */
-
-        //let context = canvas.getContext("2d");
         flight.run();
-        // boomer.update(1000 * delta);
-
-        // man.update(1000 * delta);
-        // if (keyboard.pressed("z")) {
-        // do something
-        // }
-
-        // controls.update();
-        // stats.update();
-        // man.quaternion(camera.quaternion);
-
-        camera.setRotationFromMatrix(CameraHelper.worldToView(flight.plane[0].matrix));
-
-        camera.position.copy(flight.plane[0].position);
-
-        flight.plane[1].line.position.set(flight.plane[1].position.x, flight.plane[1].position.y, flight.plane[1].position.z);
-        flight.plane[2].line.position.set(flight.plane[2].position.x, flight.plane[2].position.y, flight.plane[2].position.z);
-        flight.plane[3].line.position.set(flight.plane[3].position.x, flight.plane[3].position.y, flight.plane[3].position.z);
-
-
+        camera.update();
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        //flight.setWidth(window.innerWidth);
-        //flight.setHeight(window.innerHeight);
     }
-
     function render() {
-        renderer.render(scene, camera);
-        flight.render(context);
+        renderer.render(scene, camera.getCamera());
+        flight.render();
     }
 }
-
 Main.init();
 Main.animate();

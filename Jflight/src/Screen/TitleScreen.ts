@@ -1,6 +1,6 @@
-﻿///<reference path="./Scene.ts" />
+﻿///<reference path="./Screen.ts" />
 
-class TitleScene extends Scene {
+class TitleScene extends _Screen {
 
     public constructor(protected canvas: HTMLCanvasElement) {
         super(canvas);

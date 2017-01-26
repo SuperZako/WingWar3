@@ -26,10 +26,10 @@ class Bullet extends PhysicsState {
     // 弾丸移動、敵機とのあたり判定、地面との当たり判定を行う
     // 弾丸発射処理はJflightクラス側で行われている
 
-    public move(world: Jflight, plane: Plane) {
+    public move(world: Game, plane: Plane) {
 
         // 重力加速
-        this.velocity.z += Jflight.G * Jflight.DT;
+        this.velocity.z += Game.G * Game.DT;
 
         // 一つ前の位置を保存
         // this.oldPosition.set(this.position.x, this.position.y, this.position.z);
@@ -37,7 +37,7 @@ class Bullet extends PhysicsState {
 
         // 移動
         // this.position.addCons(this.velocity, Jflight.DT);
-        this.position.addScaledVector(this.velocity, Jflight.DT);
+        this.position.addScaledVector(this.velocity, Game.DT);
         this.use--;
 
         // 弾丸を移動させる
@@ -84,7 +84,7 @@ class Bullet extends PhysicsState {
             //this.m_vv.setCons(<any>this.velocity, Jflight.DT);
             let v = new THREE.Vector3();
             v.copy(this.velocity);
-            v.multiplyScalar(Jflight.DT);
+            v.multiplyScalar(Game.DT);
 
             //let v0 = this.m_vv.abs();
             let v0 = v.length();

@@ -1,11 +1,9 @@
-﻿///<reference path="./Scene/Scene.ts" />
-///<reference path="./Scene/TitleScene.ts" />
+﻿///<reference path="./Screen.ts" />
+///<reference path="./TitleScreen.ts" />
 
-class HUD extends Scene {
-    private currentScene: Scene;
-    public constructor(canvas: HTMLCanvasElement, private plane: Plane, private world: Jflight) {
+class HUD extends _Screen {
+    public constructor(canvas: HTMLCanvasElement, private plane: Plane, private world: Game) {
         super(canvas);
-        this.currentScene = new TitleScene(canvas);
     }
     public drawCross(x: number, y: number, length: number) {
         this.drawLine("rgb(255, 255, 255)", x, y - length, x, y + length);
@@ -26,7 +24,7 @@ class HUD extends Scene {
 
         this.drawCircle("rgb(255, 255, 255)", centerX + this.plane.stickPos.y * radius, centerY - this.plane.stickPos.x * radius, 10);
 
-        this.drawCircle("rgb(255, 255, 255)", centerX + Jflight.mouseX, centerY + Jflight.mouseY, 10);
+        this.drawCircle("rgb(255, 255, 255)", centerX + Game.mouseX, centerY + Game.mouseY, 10);
 
         let y = this.plane.rotation.y;
 
@@ -51,7 +49,7 @@ class HUD extends Scene {
         this.fillText("Speed=" + this.plane.velocity.length(), "18px 'ＭＳ Ｐゴシック'", 50, 50);
 
         let t = this.world.plane[this.plane.target].position.clone();
-        let u = CameraHelper.toScreenPosition(t, Main.camera);
+        let u = CameraHelper.toScreenPosition(t, Main.camera.getCamera());
 
         this.strokeRect("rgb(0, 255, 0)", u.x - 10, u.y - 10, 20, 20);
 

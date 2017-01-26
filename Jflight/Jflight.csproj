@@ -606,9 +606,13 @@
     <Content Include="packages.config" />
     <TypeScriptCompile Include="node_modules\%40types\dat-gui\index.d.ts" />
     <TypeScriptCompile Include="src\Camera.ts" />
+    <TypeScriptCompile Include="src\common\FSM\State.ts" />
+    <TypeScriptCompile Include="src\common\FSM\StateMachine.ts" />
+    <TypeScriptCompile Include="src\FlightRecorder.ts" />
     <TypeScriptCompile Include="src\Helpers\CameraHelper.ts" />
-    <TypeScriptCompile Include="src\Scene\Scene.ts" />
-    <TypeScriptCompile Include="src\Scene\TitleScene.ts" />
+    <TypeScriptCompile Include="src\MouseState.ts" />
+    <TypeScriptCompile Include="src\Screen\Screen.ts" />
+    <TypeScriptCompile Include="src\Screen\TitleScreen.ts" />
     <TypeScriptCompile Include="src\Sky\Cloud.ts" />
     <TypeScriptCompile Include="src\Sky\SkyShader.ts" />
     <Content Include="test\blenedr.html" />
@@ -760,6 +764,7 @@
     <Content Include="models\suzanne.json" />
     <Content Include="models\ground.json" />
     <Content Include="models\ground.blend" />
+    <Content Include="models\a6m5.json" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
@@ -789,8 +794,8 @@
     <TypeScriptCompile Include="src\Bullet.ts" />
     <TypeScriptCompile Include="src\Helpers\MathHelper.ts" />
     <TypeScriptCompile Include="src\Helpers\Vector3Helper.ts" />
-    <TypeScriptCompile Include="src\HUD.ts" />
-    <TypeScriptCompile Include="src\Jflight.ts" />
+    <TypeScriptCompile Include="src\Screen\HUD.ts" />
+    <TypeScriptCompile Include="src\Game.ts" />
     <TypeScriptCompile Include="src\Missile.ts" />
     <TypeScriptCompile Include="src\Physics\PhysicsState.ts" />
     <TypeScriptCompile Include="src\Plane.ts" />

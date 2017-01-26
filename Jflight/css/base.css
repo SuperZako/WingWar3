@@ -24,6 +24,12 @@
     z-index: 0;
 }
 
+.gui-container {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 100;
+}
 
 
 .scene {

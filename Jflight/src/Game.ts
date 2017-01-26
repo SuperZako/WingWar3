@@ -1,3 +1,6 @@
+///<reference path="./common/FSM/StateMachine.ts" />
+///<reference path="./common/FSM/State.ts" />
+
 ///<reference path="Plane.ts" />
 
 //
@@ -25,7 +28,7 @@
 //     -------->X
 
 
-class Jflight {
+class Game {
 
     // 定数宣言
     static PMAX = 4;          // 機体の最大数
@@ -35,11 +38,8 @@ class Jflight {
     // 変数
     public plane: Plane[] = [];                      // 各機体オブジェクトへの配列
     protected autoFlight = true;          // 自機（plane[0]）を自動操縦にするのか
-    static obj: THREE.Vector3[][] = [];            // 機体の形状（三角形の集合）
 
-    // テンポラリオブジェクト
-
-    private hud: HUD;
+    private screen: _Screen;
 
 
     static mouseX: number;
@@ -47,21 +47,22 @@ class Jflight {
 
     isMouseMove = false;
 
-    // アプレットの構築
+    private stateMachine: StateMachine<Game>;
 
-    public constructor(scene: THREE.Scene, hudCanvas: HTMLCanvasElement) {
+    public constructor(scene: THREE.Scene, canvas: HTMLCanvasElement) {
         // super();
+        //set up the state machine
 
-        // 機体形状の初期化
-        this.objInit();
+        this.stateMachine = new StateMachine<Game>(this);
+
 
         // 不要なガーベッジコレクションを避けるために、
         // オブジェクトを初めに出来るだけ作っておく
-        for (let i = 0; i < Jflight.PMAX; i++) {
+        for (let i = 0; i < Game.PMAX; i++) {
             this.plane.push(new Plane(scene));
         }
 
-        this.hud = new HUD(hudCanvas, this.plane[0], this);
+        this.screen = new TitleScene(canvas);//new HUD(hudCanvas, this.plane[0], this);
 
         // 各機体の設定
         this.plane[0].no = 0;
@@ -82,107 +83,14 @@ class Jflight {
         this.plane[3].level = 30;
     }
 
-    // 機体形状の初期化
-    protected objInit() {
-        if (Jflight.obj.length !== 0) {
-            return;
-        }
-
-        for (let j = 0; j < 20; j++) {
-            Jflight.obj.push([]);
-            for (let i = 0; i < 3; i++) {
-                Jflight.obj[j].push(new THREE.Vector3());
-            }
-        }
-
-        // 全て独立三角形で構成
-        // 本当は各頂点を共有した方が早いがここでは表示周りを簡略化
-
-        Jflight.obj[0][0].set(-0.000000, -2.000000, 0.000000);
-        Jflight.obj[0][1].set(0.000000, 4.000000, 0.000000);
-        Jflight.obj[0][2].set(6.000000, -2.000000, 0.000000);
-
-        Jflight.obj[1][0].set(0.000000, -3.000000, 1.500000);
-        Jflight.obj[1][1].set(2.000000, -3.000000, 0.000000);
-        Jflight.obj[1][2].set(0.000000, 8.000000, 0.000000);
-
-        Jflight.obj[2][0].set(2.000000, 0.000000, 0.000000);
-        Jflight.obj[2][1].set(3.000000, 0.000000, -0.500000);
-        Jflight.obj[2][2].set(3.500000, 0.000000, 0.000000);
-
-        Jflight.obj[3][0].set(3.000000, 0.000000, 0.000000);
-        Jflight.obj[3][1].set(3.000000, -1.000000, -1.500000);
-        Jflight.obj[3][2].set(3.000000, 0.000000, -2.000000);
-
-        Jflight.obj[4][0].set(3.000000, -1.000000, -2.000000);
-        Jflight.obj[4][1].set(3.000000, 2.000000, -2.000000);
-        Jflight.obj[4][2].set(3.500000, 1.000000, -2.500000);
-
-        Jflight.obj[5][0].set(1.000000, 0.000000, -6.000000);
-        Jflight.obj[5][1].set(2.000000, 4.000000, -6.000000);
-        Jflight.obj[5][2].set(2.000000, -2.000000, 0.000000);
-
-        Jflight.obj[6][0].set(3.000000, 0.000000, -6.000000);
-        Jflight.obj[6][1].set(2.000000, 4.000000, -6.000000);
-        Jflight.obj[6][2].set(2.000000, -2.000000, 0.000000);
-
-        Jflight.obj[7][0].set(2.000000, 1.000000, 0.000000);
-        Jflight.obj[7][1].set(2.000000, -3.000000, 4.000000);
-        Jflight.obj[7][2].set(2.000000, -3.000000, -2.000000);
-
-        Jflight.obj[8][0].set(1.000000, 0.000000, 0.000000);
-        Jflight.obj[8][1].set(0.000000, 0.000000, -1.000000);
-        Jflight.obj[8][2].set(0.000000, 1.000000, 0.000000);
-
-        Jflight.obj[9][0].set(0.000000, -2.000000, 0.000000);
-        Jflight.obj[9][1].set(0.000000, 4.000000, 0.000000);
-        Jflight.obj[9][2].set(-6.000000, -2.000000, 0.000000);
-
-        Jflight.obj[10][0].set(0.000000, -3.000000, 1.500000);
-        Jflight.obj[10][1].set(-2.000000, -3.000000, 0.000000);
-        Jflight.obj[10][2].set(0.000000, 8.000000, 0.000000);
-
-        Jflight.obj[11][0].set(-2.000000, 0.000000, 0.000000);
-        Jflight.obj[11][1].set(-3.000000, 0.000000, -0.500000);
-        Jflight.obj[11][2].set(-3.500000, 0.000000, 0.000000);
-
-        Jflight.obj[12][0].set(-3.000000, 0.000000, 0.000000);
-        Jflight.obj[12][1].set(-3.000000, -1.000000, -1.500000);
-        Jflight.obj[12][2].set(-3.000000, 0.000000, -2.000000);
-
-        Jflight.obj[13][0].set(-3.000000, -1.000000, -2.000000);
-        Jflight.obj[13][1].set(-3.000000, 2.000000, -2.000000);
-        Jflight.obj[13][2].set(-3.500000, 1.000000, -2.500000);
-
-        Jflight.obj[14][0].set(-1.000000, 0.000000, -6.000000);
-        Jflight.obj[14][1].set(-2.000000, 4.000000, -6.000000);
-        Jflight.obj[14][2].set(-2.000000, -2.000000, 0.000000);
-
-        Jflight.obj[15][0].set(-3.000000, 0.000000, -6.000000);
-        Jflight.obj[15][1].set(-2.000000, 4.000000, -6.000000);
-        Jflight.obj[15][2].set(-2.000000, -2.000000, 0.000000);
-
-        Jflight.obj[16][0].set(-2.000000, 1.000000, 0.000000);
-        Jflight.obj[16][1].set(-2.000000, -3.000000, 4.000000);
-        Jflight.obj[16][2].set(-2.000000, -3.000000, -2.000000);
-
-        Jflight.obj[17][0].set(-1.000000, 0.000000, 0.000000);
-        Jflight.obj[17][1].set(0.000000, 0.000000, -1.000000);
-        Jflight.obj[17][2].set(0.000000, 1.000000, 0.000000);
-
-        Jflight.obj[18][0].set(3.000000, 0.000000, -2.000000);
-        Jflight.obj[18][1].set(3.000000, 0.000000, -1.500000);
-        Jflight.obj[18][2].set(3.000000, 7.000000, -2.000000);
-    }
-
 
     // 画面表示
-    public draw(_context: CanvasRenderingContext2D) {
+    public draw() {
         // 自機の変換行列を念のため再計算しておく
         this.plane[0].checkTrans();
 
         // HUD表示
-        this.hud.render();
+        this.screen.render();
     }
 
     // メインループ
@@ -196,15 +104,15 @@ class Jflight {
 
         // 各機を移動
         this.plane[0].move(this, this.autoFlight);
-        for (let i = 1; i < Jflight.PMAX; i++) {
+        for (let i = 1; i < Game.PMAX; i++) {
             this.plane[i].move(this, true);
         }
     }
 
-    public render(context: CanvasRenderingContext2D) {
+    public render() {
         // カメラ位置を自機にセットして表示
         // this.camerapos.set(this.plane[0].position.x, this.plane[0].position.y, this.plane[0].position.z);
-        this.draw(context);
+        this.draw();
     }
     // 各機体を表示
     // 弾丸やミサイルもここで表示している
