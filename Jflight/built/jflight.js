@@ -1990,6 +1990,7 @@ var _Screen = (function () {
         }
     }
     _Screen.prototype.drawLine = function (strokeStyle, x1, y1, x2, y2) {
+        //短縮表現
         var ctx = this.context;
         ctx.save();
         {

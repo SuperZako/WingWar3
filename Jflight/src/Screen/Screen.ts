@@ -9,9 +9,9 @@
     }
 
     protected drawLine(strokeStyle: string, x1: number, y1: number, x2: number, y2: number) {
-        let ctx = this.context;
+        //短縮表現
+        const ctx = this.context;
         ctx.save(); {
-
             ctx.strokeStyle = strokeStyle;
             //描画することを宣言する
             ctx.beginPath();
@@ -24,14 +24,13 @@
             //context.lineTo(51, 15);
             //描画を終了する
             ctx.closePath();
-
             //上記記述は定義情報である。この命令で線を描く。
             ctx.stroke();
         } ctx.restore();
     }
 
     protected drawCircle(strokeStyle: string, centerX: number, centerY: number, radius: number) {
-        let ctx = this.context;
+        const ctx = this.context;
         ctx.save(); {
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
@@ -43,7 +42,7 @@
         } ctx.restore();
     }
     public fillText(text: string, font: string, x: number, y: number) {
-        let context = this.context;
+        const context = this.context;
         context.save(); {
             context.font = font;//"18px 'ＭＳ Ｐゴシック'";
             context.fillStyle = "white";

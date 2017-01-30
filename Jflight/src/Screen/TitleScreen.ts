@@ -6,7 +6,7 @@ class TitleScene extends _Screen {
         super(canvas);
     }
     public drawTitle(text: string, font: string, x: number, y: number) {
-        let ctx = this.context;
+        const ctx = this.context;
         ctx.save(); {
             ctx.shadowOffsetX = 2;
             ctx.shadowOffsetY = 2;
